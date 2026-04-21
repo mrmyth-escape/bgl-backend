@@ -1,74 +1,11 @@
-// api/_simplybook.js
-// ── SimplyBook API 共用模組 ──────────────────────────────
-// 所有需要呼叫 SimplyBook 的 endpoint 都 import 這個檔案
-
-const API_ENDPOINT = "https://user-api.simplybook.asia/";
-const AUTH_ENDPOINT = "https://user-api.simplybook.asia/login";
-const COMPANY = "bglescape";
-
-// Vercel Serverless 每次冷啟動 in-memory 不保證存活
-// 用模組層級快取，同一個 instance 內共用（通常可撐數分鐘）
-let _tokenCache = { token: null, expiresAt: 0 };
-
-/**
- * 取得有效的 SimplyBook access token
- * 自動處理過期重取（token 有效期 1 小時，提前 5 分鐘換新）
- */
-export async function getToken(apiKey) {
-  const now = Date.now();
-  if (_tokenCache.token && now < _tokenCache.expiresAt) {
-    return _tokenCache.token;
+{
+  "name": "bgl-escape-backend",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
   }
-
-  const res = await fetch(AUTH_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "getToken",
-      params: [COMPANY, apiKey],
-    }),
-  });
-
-  const data = await res.json();
-  if (data.error) throw new Error(`SimplyBook getToken error: ${JSON.stringify(data.error)}`);
-
-  const token = data.result;
-  // 55 分鐘後過期（保留 5 分鐘緩衝）
-  _tokenCache = { token, expiresAt: now + 55 * 60 * 1000 };
-  return token;
 }
-
-/**
- * 呼叫 SimplyBook JSON-RPC API
- */
-export async function sbCall(method, params, token) {
-  const res = await fetch(API_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type":   "application/json",
-      "X-Company-Login": COMPANY,
-      "X-Token":         token,
-    },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(`SimplyBook ${method} error: ${JSON.stringify(data.error)}`);
-  return data.result;
-}
-
-/**
- * Service ID → 本系統 Room ID 對照表
- */
-export const SERVICE_MAP = {
-  2:  { roomId: "A", name: "孤兒怨",   branch: "大忠店", locationId: 1 },
-  3:  { roomId: "B", name: "屎力全開", branch: "大忠店", locationId: 1 },
-  15: { roomId: "C", name: "越獄者",   branch: "大忠店", locationId: 1 },
-  14: { roomId: "D", name: "詭廁",     branch: "大忠店", locationId: 1 },
-  11: { roomId: "E", name: "詭獄",     branch: "謎先生", locationId: 2 },
-  17: { roomId: "F", name: "詭獄加場", branch: "謎先生", locationId: 2 },
-  16: { roomId: "G", name: "詭店",     branch: "謎先生", locationId: 2 },
-};
-
-export { COMPANY, API_ENDPOINT };
