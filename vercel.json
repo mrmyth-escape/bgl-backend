@@ -1,0 +1,135 @@
+# 勃根地密室排班系統 — 後端部署指南
+
+## 專案結構
+
+```
+bgl-backend/
+├── api/
+│   ├── _simplybook.js   # SimplyBook API 共用模組（底線開頭 = 不對外公開）
+│   ├── webhook.js       # 接收 SimplyBook 即時推送
+│   ├── bookings.js      # 前端輪詢取得今日預約
+│   └── health.js        # 健康檢查
+├── package.json
+├── vercel.json
+└── README.md
+```
+
+---
+
+## 部署步驟
+
+### 1. 上傳到 GitHub
+
+在電腦上開終端機，執行：
+
+```bash
+# 如果還沒裝 Git，先去 https://git-scm.com 下載安裝
+
+cd bgl-backend
+git init
+git add .
+git commit -m "init: bgl escape room backend"
+```
+
+然後去 GitHub 建一個新 repository（名稱建議：`bgl-escape-backend`），再：
+
+```bash
+git remote add origin https://github.com/你的帳號/bgl-escape-backend.git
+git push -u origin main
+```
+
+---
+
+### 2. 在 Vercel 匯入專案
+
+1. 進入 [vercel.com/dashboard](https://vercel.com/dashboard)
+2. 點 **Add New → Project**
+3. 選剛才建立的 `bgl-escape-backend` repository → **Import**
+4. Framework Preset 選 **Other**
+5. 點 **Deploy**（先不管環境變數，等下一步設定）
+
+---
+
+### 3. 設定環境變數（重要！）
+
+部署完成後，進入 Vercel 的 Project 頁面：
+
+**Settings → Environment Variables → Add**
+
+| 變數名稱 | 值 | 說明 |
+|---|---|---|
+| `SB_API_KEY` | `469f93d12945cefd5ca147b87d00b7d73a951259da88d6e209d515bc0ad4ea47` | SimplyBook API 金鑰 |
+
+填完後點 **Save**，然後回到 **Deployments → 最新一筆 → 右側三個點 → Redeploy**（讓環境變數生效）。
+
+> ⚠️ 注意：API 密碼（`f78159d924...`）這個版本暫時不需要用到，API 金鑰就夠了。
+> 如果之後需要 Admin API 才會用到密碼。
+
+---
+
+### 4. 確認部署成功
+
+Vercel 會給你一個網域，格式是 `bgl-escape-backend-xxxx.vercel.app`
+
+開瀏覽器進入：
+```
+https://bgl-escape-backend-xxxx.vercel.app/api/health
+```
+
+如果看到以下 JSON，代表成功：
+```json
+{
+  "ok": true,
+  "server": "bgl-escape-backend",
+  "simplybook": { "ok": true, "message": "SimplyBook 連線正常 ✓" }
+}
+```
+
+---
+
+### 5. 把 Webhook URL 填入 SimplyBook
+
+回到 SimplyBook 後台 → **Custom Features → API**
+
+在「回撥網址」欄位填入：
+```
+https://bgl-escape-backend-xxxx.vercel.app/api/webhook
+```
+
+點「儲存」。之後客人每次預約、修改、取消，SimplyBook 都會即時推送到這個網址。
+
+---
+
+### 6. 把 API 網域填進前端 JSX
+
+打開 `escape-room-light.jsx`，在 `SB_CONFIG` 加入後端網址：
+
+```js
+const SB_CONFIG = {
+  companyLogin: "bglescape",
+  apiEndpoint:  "https://user-api.simplybook.asia/",
+  backendUrl:   "https://bgl-escape-backend-xxxx.vercel.app", // ← 填你的 Vercel 網域
+  locations: { 1:"大忠店", 2:"謎先生" },
+};
+```
+
+---
+
+## API 端點一覽
+
+| 端點 | 方法 | 說明 |
+|---|---|---|
+| `/api/health` | GET | 確認伺服器 + SimplyBook 連線狀態 |
+| `/api/bookings?date=YYYY-MM-DD` | GET | 取得指定日期的所有預約 |
+| `/api/webhook` | POST | SimplyBook 即時推送（自動呼叫，不用手動） |
+
+---
+
+## 費用說明
+
+Vercel Hobby（免費）方案限制：
+- 每月 100GB 流量：密室業務量完全用不完
+- Serverless Function 每月 100 小時執行時間：輕鬆應付
+- 無自訂網域限制（可以綁自己買的域名）
+
+結論：**完全免費，不需要升級付費方案。**
