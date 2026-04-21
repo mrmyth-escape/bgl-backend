@@ -1,78 +1,54 @@
-// api/bookings.js
-// ── 預約清單 API ─────────────────────────────────────────
-// 前端每 60 秒輪詢一次，取得今日所有預約
-// GET /api/bookings?date=2026-04-20
-// GET /api/bookings         （不帶 date 預設今日）
+// api/webhook.js — POST /api/webhook
+// SimplyBook Webhook 接收器，同時匯出 store 供 bookings.js 合併
 
-import { getToken, sbCall, SERVICE_MAP } from "./_simplybook.js";
-import { store } from "./webhook.js";
+import { SERVICE_MAP } from "./_simplybook.js";
+
+// 記憶體快取：bookingId → booking 物件（Serverless 同實例共用）
+export const store = {};
 
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "GET")    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const apiKey = process.env.SB_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "SB_API_KEY 未設定" });
+    const payload = req.body || {};
+    const notification = payload.notification || payload;
 
-    // 目標日期，預設今天
-    const dateParam = req.query.date;
-    const today = dateParam || new Date().toISOString().slice(0, 10);
+    const bookingId = String(notification.booking_id || notification.id || "");
+    const status    = notification.status || "booked";
+    const serviceId = Number(notification.service_id || notification.event_id || 0);
+    const startDt   = notification.start_date_time || notification.start_time || "";
+    const date      = startDt.length >= 10 ? startDt.slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const timeStr   = startDt.length >= 16 ? startDt.slice(11, 16) : "";
+    const roomInfo  = SERVICE_MAP[serviceId];
 
-    const token = await getToken(apiKey);
+    if (!bookingId) {
+      return res.status(400).json({ error: "missing booking_id" });
+    }
 
-    // 從 SimplyBook 拉今日預約清單
-    const sbBookings = await sbCall("getBookingList", [{
-      date_from: today,
-      date_to:   today,
-      status:    ["approved", "confirmed", "pending"],
-    }], token);
-
-    // 轉換格式
-    const bookings = (sbBookings || []).map(b => {
-      const serviceId = Number(b.service_id || b.event_id);
-      const roomInfo  = SERVICE_MAP[serviceId];
-      const startTime = b.start_date_time || b.start_time || "";
-      const timeStr   = startTime.length >= 16 ? startTime.slice(11, 16) : startTime;
-
-      return {
-        bookingId:   b.id,
-        roomId:      roomInfo?.roomId  ?? null,
-        roomName:    roomInfo?.name    ?? `Service ${serviceId}`,
-        branch:      roomInfo?.branch  ?? "未知分店",
+    if (status === "cancelled" || status === "deleted") {
+      if (store[bookingId]) store[bookingId].status = "cancelled";
+    } else {
+      store[bookingId] = {
+        bookingId,
+        roomId:     roomInfo?.roomId  ?? null,
+        roomName:   roomInfo?.name    ?? `Service ${serviceId}`,
+        branch:     roomInfo?.branch  ?? "未知分店",
         serviceId,
-        time:        timeStr,
-        date:        today,
-        clientName:  b.client_name  ?? b.name ?? "",
-        clientPhone: b.client_phone ?? "",
-        source:      "simplybook",
-        status:      "booked",
+        time:       timeStr,
+        date,
+        clientName: notification.client_name ?? notification.name ?? "",
+        source:     "simplybook",
+        status:     "booked",
       };
-    });
+    }
 
-    // 合併 Webhook 即時快取（補漏、覆蓋最新狀態）
-    const todayFromStore = Object.values(store).filter(b => b.date === today);
-    todayFromStore.forEach(wb => {
-      const idx = bookings.findIndex(b => b.bookingId === wb.bookingId);
-      if (idx >= 0) {
-        bookings[idx] = { ...bookings[idx], ...wb };
-      } else if (wb.status !== "cancelled") {
-        bookings.push(wb);
-      }
-    });
-
-    // 移除已取消
-    const active = bookings.filter(b => b.status !== "cancelled");
-
-    return res.status(200).json({
-      ok:       true,
-      date:     today,
-      count:    active.length,
-      bookings: active,
-    });
+    console.log(`[webhook] booking ${bookingId} → ${status}`);
+    return res.status(200).json({ ok: true });
 
   } catch (err) {
-    console.error("[bookings] Error:", err.message);
+    console.error("[webhook] Error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 }
