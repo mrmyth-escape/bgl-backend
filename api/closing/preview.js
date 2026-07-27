@@ -21,10 +21,23 @@ export default handler(async (req, res) => {
   const storeCode = req.query.store || DEFAULT_STORE;
   const date      = assertDate(req.query.date || defaultBusinessDate(), "date");
 
+  // 房間清單讓結帳頁面能手動選房間、並用定價自動算金額
+  const roomRows = await sql`
+    SELECT service_id, room_code, name, unit_price FROM rooms
+    WHERE store_code = ${storeCode} AND active
+    ORDER BY room_code
+  `;
+
   const meta = {
     paymentMethods:    PAYMENT_METHODS,
     expenseCategories: EXPENSE_CATEGORIES,
     denominations:     DENOMINATIONS,
+    rooms: roomRows.map((r) => ({
+      serviceId: r.service_id,
+      roomCode:  r.room_code,
+      name:      r.name,
+      unitPrice: r.unit_price,
+    })),
   };
 
   // 已經有單子（草稿或已鎖定）就直接回既有內容，不要拿線上資料覆蓋店員填過的東西

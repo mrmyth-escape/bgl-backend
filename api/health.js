@@ -12,7 +12,9 @@ export default async function handler(req, res) {
   const simplybook = await checkSimplyBook();
   const database   = await checkDatabase();
 
-  const ok = simplybook.ok && database.ok;
+  // SimplyBook 是選配 —— 沒接也能正常結帳（場次由店員手動輸入），
+  // 所以只有資料庫掛掉才算系統不健康。
+  const ok = database.ok;
   return res.status(ok ? 200 : 503).json({
     ok,
     server:    "bgl-escape-backend",
@@ -30,7 +32,9 @@ export default async function handler(req, res) {
 }
 
 async function checkSimplyBook() {
-  if (!process.env.SB_API_KEY) return { ok: false, message: "未設定 SB_API_KEY" };
+  if (!process.env.SB_API_KEY) {
+    return { ok: false, optional: true, message: "未接 SimplyBook（選配）—— 場次由店員在結帳頁面輸入" };
+  }
   try {
     await getToken(process.env.SB_API_KEY);
     return { ok: true, message: "SimplyBook 連線正常 ✓" };

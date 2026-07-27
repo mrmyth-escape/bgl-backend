@@ -22,8 +22,8 @@ Serverless 每次呼叫都是新實例，直連會很快把連線數吃光。
 |---|:--:|---|
 | `DATABASE_URL` | ✅ | 上一步的連線池連線字串 |
 | `APP_API_KEY` | ✅ | 自己設一組長密碼，店員登入結帳頁面時要用。**沒設定的話所有 API 一律拒絕服務** |
-| `SB_API_KEY` | ✅ | SimplyBook 的 API key，用來抓當日場次 |
-| `SB_WEBHOOK_SECRET` | 建議 | 設了之後 webhook 網址要帶 `?secret=xxx`，防止有人偽造訂位 |
+| `SB_API_KEY` | 選填 | SimplyBook 的 API key。**不設也能用** —— 場次由店員在結帳頁面手動輸入 |
+| `SB_WEBHOOK_SECRET` | 選填 | 有接 SimplyBook 才需要。設了之後 webhook 網址要帶 `?secret=xxx` |
 | `ALLOWED_ORIGIN` | 建議 | 上線後填你的網域，例如 `https://bgl.vercel.app`。不填等於開放所有來源 |
 | `CLOSING_TOLERANCE` | 選填 | 允許的誤差（元），預設 `0`，也就是必須完全對上 |
 
@@ -42,18 +42,20 @@ curl -X POST https://你的網域/api/admin/migrate \
 
 ### 4. 確認狀態
 
-瀏覽器打開 `https://你的網域/api/health`，資料庫與 SimplyBook 都要是 `ok: true`。
+瀏覽器打開 `https://你的網域/api/health`，最外層要是 `ok: true`（代表資料庫正常）。
+沒接 SimplyBook 時 `simplybook.ok` 會是 `false`、`optional: true`，這是正常的。
 
 ### 5. 設定房間定價
 
-SimplyBook 若沒有回傳金額，系統會用「每人定價 × 人數」推估，讓店員在頁面上確認即可。
-先把定價填進去：
+打開 `/closing.html` → **房間定價** → 填每人價格 → 儲存。
+
+設定後，新增場次時只要填人數就會自動算金額（仍可手動改）。不設也能用，只是每場金額要自己打。
+
+也可以直接下 SQL：
 
 ```sql
 UPDATE rooms SET unit_price = 800 WHERE room_code = 'A';
 ```
-
-不設也能用 —— 只是每場金額會是 0，要店員自己打。
 
 ---
 
@@ -62,7 +64,10 @@ UPDATE rooms SET unit_price = 800 WHERE room_code = 'A';
 **打烊時** 開 `https://你的網域/closing.html`
 
 1. 第一次使用貼上 API 金鑰（之後瀏覽器會記住）
-2. 當日場次會自動帶出來，確認人數與金額，沒到店的取消勾選
+2. 建立當日場次：
+   - **有接 SimplyBook** —— 自動帶出來，確認人數與金額，沒到店的取消勾選
+   - **沒接 SimplyBook** —— 按「＋ 手動新增場次」，選房間、填時間與人數，
+     設過定價的話金額會自動算好
 3. 填各種收款方式的實收金額
 4. 有雜支就記一筆，註明是不是用現金付的
 5. 點鈔，按面額填張數
@@ -90,8 +95,9 @@ UPDATE rooms SET unit_price = 800 WHERE room_code = 'A';
 |---|---|---|
 | `/api/health` | GET | 健檢（免金鑰） |
 | `/api/admin/migrate` | POST | 套用 `db/schema.sql` |
-| `/api/webhook` | POST | SimplyBook 訂位通知接收 |
-| `/api/bookings?date=` | GET | 當日訂位清單 |
+| `/api/rooms?store=` | GET / PATCH | 房間清單 / 更新每人定價 |
+| `/api/webhook` | POST | SimplyBook 訂位通知接收（選配） |
+| `/api/bookings?date=` | GET | 當日訂位清單（選配） |
 | `/api/closing/preview?date=&store=` | GET | 打烊頁面初始資料 |
 | `/api/closing` | GET / POST | 讀取日結單 / 存草稿 |
 | `/api/closing/submit` | POST | 送出並鎖定（會擋差額） |
@@ -103,9 +109,9 @@ UPDATE rooms SET unit_price = 800 WHERE room_code = 'A';
 日期一律 `YYYY-MM-DD`，金額一律以「元」為單位的整數。
 `store` 目前有 `dazhong`（大忠店）與 `mrmyth`（謎先生），預設 `dazhong`。
 
-### SimplyBook Webhook 設定
+### SimplyBook Webhook 設定（選配）
 
-在 SimplyBook 後台把 webhook 網址設成：
+要接 SimplyBook 時，在後台把 webhook 網址設成：
 
 ```
 https://你的網域/api/webhook?secret=你的SB_WEBHOOK_SECRET
@@ -144,8 +150,8 @@ npm test          # 金額計算的迴歸測試
 
 ## 已知限制
 
-- **SimplyBook 的金額欄位名稱各版本不一致**。`normalizeBooking()` 會依序嘗試
-  `amount` / `price` / `total_price` / `invoice_amount`，抓不到就退回「定價 × 人數」，
-  最後由店員在頁面上確認。上線後請比對前幾天的實際數字，確認抓的是對的欄位。
 - 目前是單一 API 金鑰，沒有分帳號。要追蹤是誰結的帳，靠「結帳人員」欄位（人工填寫）。
+- SimplyBook 整合是選配且尚未用真實帳號驗證過。各版本的金額欄位名稱不一致，
+  `normalizeBooking()` 會依序嘗試 `amount` / `price` / `total_price` / `invoice_amount`，
+  抓不到就退回「定價 × 人數」。真的要接的時候需要比對實際回傳確認欄位。
 - 尚未串接 POS 的逐筆交易，日結是以「場次」為單位。

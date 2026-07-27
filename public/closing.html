@@ -89,6 +89,14 @@
     </div>
     <div class="row" style="margin-top:10px">
       <button class="ghost" onclick="load()">重新載入當日資料</button>
+      <button class="ghost" onclick="togglePrices()">房間定價</button>
+    </div>
+    <div id="prices" style="display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:12px">
+      <div class="muted" style="margin:0 0 8px">
+        設定每人定價後，新增場次時填人數就會自動算金額（仍可手動改）。
+      </div>
+      <div id="priceRows"></div>
+      <button style="width:100%;margin-top:8px" onclick="savePrices()">儲存定價</button>
     </div>
   </section>
 
@@ -227,22 +235,37 @@ function render() {
   $('varianceReason').value = STATE.varianceReason || '';
   $('notes').value         = STATE.notes || '';
 
-  document.querySelectorAll('main input, main select, main textarea')
-    .forEach((el) => { if (el.id !== 'apikey' && el.id !== 'date' && el.id !== 'store') el.disabled = locked; });
+  // 鎖定後停用所有輸入，但設定區（金鑰/日期/分店/房間定價）不受影響
+  document.querySelectorAll('main input, main select, main textarea').forEach((el) => {
+    if (['apikey', 'date', 'store'].includes(el.id) || el.dataset.p !== undefined) return;
+    el.disabled = locked;
+  });
   $('submitBtn').disabled = locked;
 
   recalc();
 }
 
 function renderSessions() {
-  $('sessions').innerHTML = STATE.bookings.map((b, i) => `
+  const rooms = META.rooms || [];
+
+  $('sessions').innerHTML = STATE.bookings.map((b, i) => {
+    // 從訂位系統來的場次房間固定；手動新增的可以自己挑
+    const head = b.bookingId
+      ? `<span class="tag">${b.roomCode || '?'}</span>
+         <span>${b.time || '--:--'}</span>
+         <span>${b.roomName || ''}</span>
+         <span class="who">${b.clientName || ''}</span>`
+      : `<select data-i="${i}" data-f="room" style="flex:2">
+           ${rooms.map((r) => `<option value="${r.serviceId}" ${r.roomCode === b.roomCode ? 'selected' : ''}>
+             ${r.roomCode} ${r.name}</option>`).join('')}
+           <option value="" ${b.roomCode ? '' : 'selected'}>其他</option>
+         </select>
+         <input type="time" data-i="${i}" data-f="time" value="${b.time || ''}" style="flex:1">
+         <button class="ghost" style="padding:6px 10px;flex:0" onclick="delSession(${i})">刪除</button>`;
+
+    return `
     <div class="sess ${b.attended === false ? 'skip' : ''}" id="sess${i}">
-      <div class="sess-head">
-        <span class="tag">${b.roomCode || '?'}</span>
-        <span>${b.time || '--:--'}</span>
-        <span>${b.roomName || ''}</span>
-        <span class="who">${b.clientName || ''}</span>
-      </div>
+      <div class="sess-head">${head}</div>
       <div class="row">
         <div><label>人數</label>
           <input type="number" min="0" step="1" value="${b.headcount ?? 0}" data-i="${i}" data-f="headcount"></div>
@@ -255,15 +278,50 @@ function renderSessions() {
         <input type="checkbox" style="width:auto" data-i="${i}" data-f="attended"
           ${b.attended === false ? '' : 'checked'}> 有到店（取消勾選代表未到、不計入應收）
       </label>
-    </div>`).join('') || '<div class="dim">今天沒有場次。若為公休，請在下方備註說明。</div>';
+    </div>`;
+  }).join('') || '<div class="dim">今天還沒有場次，請按下方按鈕新增。若為公休，請在下方備註說明。</div>';
 
   $('sessions').oninput = (e) => {
     const { i, f } = e.target.dataset;
     if (i === undefined) return;
-    STATE.bookings[i][f] = f === 'attended' ? e.target.checked : num(e.target.value);
-    $(`sess${i}`).classList.toggle('skip', STATE.bookings[i].attended === false);
+    const b = STATE.bookings[i];
+
+    if (f === 'room') {
+      const r = (META.rooms || []).find((x) => String(x.serviceId) === e.target.value);
+      Object.assign(b, r
+        ? { serviceId: r.serviceId, roomCode: r.roomCode, roomName: r.name }
+        : { serviceId: null, roomCode: '', roomName: '其他' });
+      autoPrice(b);
+      renderSessions();
+    } else if (f === 'time') {
+      b.time = e.target.value;
+    } else if (f === 'attended') {
+      b.attended = e.target.checked;
+      $(`sess${i}`).classList.toggle('skip', !b.attended);
+    } else {
+      b[f] = num(e.target.value);
+      // 改人數時，若金額還沒被手動改過就依定價重算
+      if (f === 'headcount' && !b._amountEdited) {
+        autoPrice(b);
+        const el = document.querySelector(`[data-i="${i}"][data-f="amount"]`);
+        if (el) el.value = b.amount;
+      }
+      if (f === 'amount') b._amountEdited = true;
+    }
     recalc();
   };
+}
+
+/** 依房間定價 × 人數自動帶入金額 */
+function autoPrice(b) {
+  const r = (META.rooms || []).find((x) => x.roomCode === b.roomCode);
+  if (r && r.unitPrice > 0) b.amount = r.unitPrice * (b.headcount || 0);
+}
+
+function delSession(i) {
+  STATE.bookings.splice(i, 1);
+  renderSessions();
+  recalc();
 }
 
 function renderPayments() {
@@ -306,9 +364,13 @@ function addExpense() {
 }
 
 function addSession() {
+  const first = (META.rooms || [])[0];
   STATE.bookings.push({
-    bookingId: null, roomCode: '', roomName: '現場加場', time: '',
-    clientName: '', headcount: 0, amount: 0, prepaidAmount: 0, attended: true,
+    bookingId: null,
+    serviceId: first?.serviceId ?? null,
+    roomCode:  first?.roomCode ?? '',
+    roomName:  first?.name ?? '其他',
+    time: '', clientName: '', headcount: 0, amount: 0, prepaidAmount: 0, attended: true,
   });
   renderSessions();
   recalc();
@@ -401,6 +463,35 @@ function recalc() {
 function setSigned(el, v) {
   el.textContent = (v > 0 ? '+' : '') + nf(v);
   el.className = v === 0 ? 'ok' : 'bad';
+}
+
+// ---- 房間定價 ----
+function togglePrices() {
+  const box = $('prices');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  if (box.style.display === 'block') renderPrices();
+}
+
+function renderPrices() {
+  $('priceRows').innerHTML = (META.rooms || []).map((r) => `
+    <div class="pay" style="grid-template-columns:1fr 110px">
+      <span style="color:var(--ink)">${r.roomCode} ${r.name}</span>
+      <input type="number" min="0" step="1" data-p="${r.serviceId}" value="${r.unitPrice || ''}" placeholder="每人">
+    </div>`).join('') || '<div class="dim">尚無房間資料</div>';
+}
+
+async function savePrices() {
+  const rooms = [...document.querySelectorAll('#priceRows [data-p]')].map((el) => ({
+    serviceId: Number(el.dataset.p),
+    unitPrice: num(el.value),
+  }));
+  try {
+    await api('/api/rooms', { method: 'PATCH', body: JSON.stringify({ rooms }) });
+    await load();          // 重新取得 META.rooms
+    $('prices').style.display = 'block';
+    renderPrices();
+    toast('定價已儲存');
+  } catch (e) { toast('儲存失敗：' + e.message, 'e'); }
 }
 
 // ---- 送出 ----
