@@ -1,11 +1,16 @@
 {
   "name": "bgl-escape-backend",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "勃根地密室 — 日結結帳系統 + SimplyBook 訂位整合",
   "private": true,
+  "type": "module",
   "engines": {
     "node": ">=18"
   },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "postgres": "^3.4.4"
   }
 }

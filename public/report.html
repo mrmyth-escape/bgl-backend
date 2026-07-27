@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>營運報表 — 勃根地密室</title>
+<style>
+  :root{
+    --bg:#12100f; --card:#1c1917; --line:#332e2b; --ink:#f5f1ed; --dim:#a09892;
+    --accent:#c9a227; --ok:#3fa66a; --bad:#d9534f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.6 -apple-system,"PingFang TC","Noto Sans TC",sans-serif}
+  header{position:sticky;top:0;z-index:10;background:#12100fee;backdrop-filter:blur(8px);
+         border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  h1{margin:0;font-size:17px;flex:1;min-width:120px}
+  main{padding:16px;max-width:920px;margin:0 auto}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  section > h2{margin:0 0 12px;font-size:14px;color:var(--accent);letter-spacing:1px}
+  input,select{background:#0d0b0a;color:var(--ink);border:1px solid var(--line);
+               border-radius:8px;padding:7px 9px;font:inherit}
+  button{background:var(--accent);color:#1a1512;border:0;border-radius:8px;padding:8px 14px;
+         font:600 14px/1 inherit;cursor:pointer}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .kpi{background:#171412;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .kpi .k{font-size:12px;color:var(--dim)}
+  .kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+  .kpi .d{font-size:12px;color:var(--dim);margin-top:2px}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;font-size:14px}
+  th{color:var(--dim);font-weight:500;font-size:12px}
+  th:first-child,td:first-child{text-align:left}
+  .track{background:#0d0b0a;border-radius:4px;height:7px;overflow:hidden;min-width:60px}
+  .fill{background:var(--accent);height:100%}
+  .chart{display:flex;align-items:flex-end;gap:2px;height:140px;
+         overflow-x:auto;padding-top:8px;border-bottom:1px solid var(--line)}
+  .col{flex:1;min-width:9px;background:var(--accent);border-radius:2px 2px 0 0;position:relative}
+  .col:hover{background:#e5bb37}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .dim{color:var(--dim)}
+  .empty{color:var(--dim);text-align:center;padding:24px 0}
+  .scroll{overflow-x:auto}
+  nav a{color:var(--accent);text-decoration:none;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>營運報表</h1>
+  <select id="store"><option value="dazhong">大忠店</option><option value="mrmyth">謎先生</option></select>
+  <input type="month" id="month">
+  <button onclick="loadAll()">查詢</button>
+</header>
+
+<main>
+  <section>
+    <h2>本月總覽</h2>
+    <div id="kpis" class="cards"><div class="empty">載入中…</div></div>
+  </section>
+
+  <section>
+    <h2>每日營收</h2>
+    <div id="dailyChart" class="chart"></div>
+    <div id="dailyNote" class="dim" style="font-size:12px;margin-top:6px"></div>
+  </section>
+
+  <section>
+    <h2>各房間表現</h2>
+    <div class="scroll"><table id="rooms"></table></div>
+  </section>
+
+  <section>
+    <h2>收款方式分布</h2>
+    <div class="scroll"><table id="methods"></table></div>
+  </section>
+
+  <section>
+    <h2>星期別平均</h2>
+    <div class="scroll"><table id="weekday"></table></div>
+  </section>
+
+  <section>
+    <h2>時段熱度</h2>
+    <div class="scroll"><table id="hours"></table></div>
+  </section>
+
+  <section>
+    <h2>逐月趨勢（近 12 個月）</h2>
+    <div id="trendChart" class="chart"></div>
+    <div class="scroll"><table id="trend"></table></div>
+  </section>
+
+  <section>
+    <h2>對帳品質</h2>
+    <div id="quality"></div>
+    <div style="margin-top:10px"><nav><a href="/closing.html">→ 前往打烊結帳</a></nav></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const nf = (n) => (n ?? 0).toLocaleString('zh-TW');
+const money = (n) => 'NT$' + nf(n);
+
+function apiKey() {
+  let k = localStorage.getItem('bgl_key');
+  if (!k) { k = prompt('請輸入 API 金鑰：') || ''; if (k) localStorage.setItem('bgl_key', k); }
+  return k;
+}
+
+async function api(path) {
+  const res = await fetch(path, { headers: { 'X-Api-Key': apiKey() } });
+  const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+async function loadAll() {
+  const store = $('store').value;
+  const month = $('month').value;
+  localStorage.setItem('bgl_store', store);
+  try {
+    const [m, t] = await Promise.all([
+      api(`/api/reports/monthly?month=${month}&store=${store}`),
+      api(`/api/reports/trend?months=12&store=${store}`),
+    ]);
+    renderMonthly(m);
+    renderTrend(t);
+  } catch (e) {
+    $('kpis').innerHTML = `<div class="empty bad">載入失敗：${e.message}</div>`;
+  }
+}
+
+function kpi(k, v, d = '') {
+  return `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+}
+
+function renderMonthly(r) {
+  const s = r.summary;
+  $('kpis').innerHTML = [
+    kpi('營收', money(s.revenue), `${s.daysClosed} 天已結帳`),
+    kpi('扣除雜支', money(s.netRevenue), `雜支 ${money(s.expenseTotal)}`),
+    kpi('人次', nf(s.headcount), `${nf(s.sessions)} 場`),
+    kpi('客單價', money(s.avgPerCustomer), `每場 ${money(s.avgPerSession)}`),
+    kpi('日均營收', money(s.avgPerDay)),
+    kpi('帳差天數', `${s.varianceDays} 天`, `累計差額 ${money(s.absVariance)}`),
+  ].join('');
+
+  // 每日長條圖
+  const max = Math.max(1, ...r.daily.map((d) => d.revenue));
+  $('dailyChart').innerHTML = r.daily.map((d) =>
+    `<div class="col" style="height:${(d.revenue / max) * 100}%"
+       title="${d.date}　${money(d.revenue)}　${d.headcount} 人 / ${d.sessions} 場"></div>`
+  ).join('') || '<div class="empty">本月尚無已結帳的日期</div>';
+  $('dailyNote').textContent = r.daily.length
+    ? `最高 ${money(max)}　共 ${r.daily.length} 天（滑過長條可看細節）` : '';
+
+  bars('rooms', ['房間', '場次', '人次', '營收', '佔比'], r.byRoom, (x) => [
+    `${x.roomCode || ''} ${x.roomName || ''}`, nf(x.sessions), nf(x.headcount), money(x.revenue), x.share,
+  ]);
+
+  bars('methods', ['收款方式', '金額', '佔比'], r.byPaymentMethod, (x) => [
+    methodLabel(x.method), money(x.amount), x.share,
+  ]);
+
+  simple('weekday', ['星期', '天數', '平均營收', '總營收', '人次'], r.byWeekday, (x) => [
+    x.label, nf(x.days), money(x.avgRevenue), money(x.revenue), nf(x.headcount),
+  ]);
+
+  simple('hours', ['時段', '場次', '人次', '營收'], r.byHour, (x) => [
+    `${x.hour}:00`, nf(x.sessions), nf(x.headcount), money(x.revenue),
+  ]);
+
+  const bad = r.daily.filter((d) => d.variance || d.cashVariance);
+  $('quality').innerHTML = bad.length
+    ? `<table><tr><th>日期</th><th>帳款差額</th><th>現金差額</th></tr>` +
+      bad.map((d) => `<tr><td>${d.date}</td>
+        <td class="${d.variance ? 'bad' : 'ok'}">${nf(d.variance)}</td>
+        <td class="${d.cashVariance ? 'bad' : 'ok'}">${nf(d.cashVariance)}</td></tr>`).join('') +
+      `</table>`
+    : '<div class="ok">本月每一天帳款都完全相符 ✓</div>';
+}
+
+// 帶佔比進度條的表格（最後一欄是百分比）
+function bars(id, head, rows, map) {
+  if (!rows.length) { $(id).innerHTML = `<tr><td class="empty">尚無資料</td></tr>`; return; }
+  $(id).innerHTML =
+    `<tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>` +
+    rows.map((x) => {
+      const cells = map(x);
+      const share = cells.pop();
+      return `<tr>${cells.map((c, i) => `<td${i === 0 ? '' : ''}>${c}</td>`).join('')}
+        <td style="min-width:110px"><div style="display:flex;gap:6px;align-items:center;justify-content:flex-end">
+          <div class="track" style="flex:1"><div class="fill" style="width:${share}%"></div></div>
+          <span class="dim">${share}%</span></div></td></tr>`;
+    }).join('');
+}
+
+function simple(id, head, rows, map) {
+  if (!rows.length) { $(id).innerHTML = `<tr><td class="empty">尚無資料</td></tr>`; return; }
+  $(id).innerHTML =
+    `<tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>` +
+    rows.map((x) => `<tr>${map(x).map((c) => `<td>${c}</td>`).join('')}</tr>`).join('');
+}
+
+function renderTrend(t) {
+  const max = Math.max(1, ...t.series.map((m) => m.revenue));
+  $('trendChart').innerHTML = t.series.map((m) =>
+    `<div class="col" style="height:${(m.revenue / max) * 100}%" title="${m.month}　${money(m.revenue)}"></div>`
+  ).join('');
+
+  const pct = (v) => v === null || v === undefined
+    ? '<span class="dim">—</span>'
+    : `<span class="${v >= 0 ? 'ok' : 'bad'}">${v >= 0 ? '+' : ''}${v}%</span>`;
+
+  $('trend').innerHTML =
+    `<tr><th>月份</th><th>營收</th><th>較上月</th><th>較去年同期</th><th>人次</th><th>客單價</th></tr>` +
+    t.series.slice().reverse().map((m) => `<tr>
+      <td>${m.month}</td><td>${money(m.revenue)}</td>
+      <td>${pct(m.momChange)}</td><td>${pct(m.yoyChange)}</td>
+      <td>${nf(m.headcount)}</td><td>${money(m.avgPerCustomer)}</td></tr>`).join('');
+}
+
+function methodLabel(k) {
+  return ({
+    cash: '現金', credit_card: '信用卡', linepay: 'LINE Pay', jkopay: '街口支付',
+    twpay: '台灣 Pay', transfer: '銀行轉帳', prepaid: '線上預付/訂金', other: '其他',
+  })[k] || k;
+}
+
+(function init() {
+  const now = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  $('month').value = now.slice(0, 7);
+  $('store').value = localStorage.getItem('bgl_store') || 'dazhong';
+  loadAll();
+})();
+</script>
+</body>
+</html>

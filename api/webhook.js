@@ -1,54 +1,70 @@
 // api/webhook.js — POST /api/webhook
-// SimplyBook Webhook 接收器，同時匯出 store 供 bookings.js 合併
+// SimplyBook Webhook 接收器。
+//
+// 原本這裡把訂位寫在記憶體物件裡，在 Vercel 上每次呼叫都可能是新的實例，
+// 而且 bookings.js import 到的是「另一份」空物件 —— 資料等於沒有留下。
+// 現在一律寫入資料庫。
 
-import { SERVICE_MAP } from "./_simplybook.js";
-
-// 記憶體快取：bookingId → booking 物件（Serverless 同實例共用）
-export const store = {};
+import { db } from "./_lib/db.js";
+import { applyCors } from "./_lib/http.js";
+import { SERVICE_MAP, normalizeBooking } from "./_simplybook.js";
+import { toTaipeiDate } from "./_lib/closing.js";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  applyCors(req, res);
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "僅支援 POST" });
+
+  // SimplyBook 不簽章，所以用共用密鑰擋掉偽造請求。
+  // 設定 SB_WEBHOOK_SECRET 後，webhook 網址要帶 ?secret=xxx
+  const secret = process.env.SB_WEBHOOK_SECRET;
+  if (secret && req.query?.secret !== secret) {
+    return res.status(401).json({ error: "未授權" });
+  }
 
   try {
-    const payload = req.body || {};
+    const payload      = req.body || {};
     const notification = payload.notification || payload;
 
     const bookingId = String(notification.booking_id || notification.id || "");
-    const status    = notification.status || "booked";
-    const serviceId = Number(notification.service_id || notification.event_id || 0);
-    const startDt   = notification.start_date_time || notification.start_time || "";
-    const date      = startDt.length >= 10 ? startDt.slice(0, 10) : new Date().toISOString().slice(0, 10);
-    const timeStr   = startDt.length >= 16 ? startDt.slice(11, 16) : "";
-    const roomInfo  = SERVICE_MAP[serviceId];
+    if (!bookingId) return res.status(400).json({ error: "缺少 booking_id" });
 
-    if (!bookingId) {
-      return res.status(400).json({ error: "missing booking_id" });
-    }
+    const sql       = db();
+    const b         = normalizeBooking(notification, toTaipeiDate());
+    const rawStatus = String(notification.status || "").toLowerCase();
+    const cancelled =
+      b.status === "cancelled" || rawStatus === "cancelled" || rawStatus === "deleted";
 
-    if (status === "cancelled" || status === "deleted") {
-      if (store[bookingId]) store[bookingId].status = "cancelled";
-    } else {
-      store[bookingId] = {
-        bookingId,
-        roomId:     roomInfo?.roomId  ?? null,
-        roomName:   roomInfo?.name    ?? `Service ${serviceId}`,
-        branch:     roomInfo?.branch  ?? "未知分店",
-        serviceId,
-        time:       timeStr,
-        date,
-        clientName: notification.client_name ?? notification.name ?? "",
-        source:     "simplybook",
-        status:     "booked",
-      };
-    }
+    const room = SERVICE_MAP[b.serviceId];
 
-    console.log(`[webhook] booking ${bookingId} → ${status}`);
+    await sql`
+      INSERT INTO bookings (
+        booking_id, service_id, room_code, room_name, store_code,
+        business_date, start_time, client_name, headcount, status, source, raw, updated_at
+      ) VALUES (
+        ${bookingId}, ${b.serviceId || null}, ${room?.roomId ?? null}, ${b.roomName},
+        ${room?.storeCode ?? null}, ${b.date}, ${b.time}, ${b.clientName},
+        ${b.headcount}, ${cancelled ? "cancelled" : "booked"}, 'simplybook',
+        ${sql.json(notification)}, now()
+      )
+      ON CONFLICT (booking_id) DO UPDATE SET
+        service_id    = EXCLUDED.service_id,
+        room_code     = EXCLUDED.room_code,
+        room_name     = EXCLUDED.room_name,
+        store_code    = EXCLUDED.store_code,
+        business_date = EXCLUDED.business_date,
+        start_time    = EXCLUDED.start_time,
+        client_name   = EXCLUDED.client_name,
+        headcount     = EXCLUDED.headcount,
+        status        = EXCLUDED.status,
+        raw           = EXCLUDED.raw,
+        updated_at    = now()
+    `;
+
+    console.log(`[webhook] booking ${bookingId} → ${cancelled ? "cancelled" : "booked"}`);
     return res.status(200).json({ ok: true });
-
   } catch (err) {
-    console.error("[webhook] Error:", err.message);
+    console.error("[webhook] 失敗：", err);
     return res.status(500).json({ error: err.message });
   }
 }
