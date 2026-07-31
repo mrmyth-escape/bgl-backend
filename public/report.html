@@ -6,117 +6,221 @@
 <title>營運報表 — 勃根地密室</title>
 <style>
   :root{
-    --bg:#12100f; --card:#1c1917; --line:#332e2b; --ink:#f5f1ed; --dim:#a09892;
-    --accent:#c9a227; --ok:#3fa66a; --bad:#d9534f;
+    --purple:#552583; --purple-dk:#3C1A5E; --purple-lt:#7B4BA8; --purple-pale:#F1ECF7;
+    --gold:#FDB927;   --gold-dk:#C98A0B;
+    --bg:#F5F4F8; --card:#FFFFFF; --line:#E2DEEA; --ink:#1E1728; --dim:#6B6478;
+    --ok:#0F7B3E; --bad:#C62828;
+    --shadow:0 1px 2px rgba(30,23,40,.06), 0 4px 12px rgba(30,23,40,.05);
   }
   *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
   body{margin:0;background:var(--bg);color:var(--ink);
-       font:15px/1.6 -apple-system,"PingFang TC","Noto Sans TC",sans-serif}
-  header{position:sticky;top:0;z-index:10;background:#12100fee;backdrop-filter:blur(8px);
-         border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  h1{margin:0;font-size:17px;flex:1;min-width:120px}
-  main{padding:16px;max-width:920px;margin:0 auto}
-  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
-  section > h2{margin:0 0 12px;font-size:14px;color:var(--accent);letter-spacing:1px}
-  input,select{background:#0d0b0a;color:var(--ink);border:1px solid var(--line);
-               border-radius:8px;padding:7px 9px;font:inherit}
-  button{background:var(--accent);color:#1a1512;border:0;border-radius:8px;padding:8px 14px;
-         font:600 14px/1 inherit;cursor:pointer}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-  .kpi{background:#171412;border:1px solid var(--line);border-radius:10px;padding:12px}
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif}
+
+  header{position:sticky;top:0;z-index:20;background:var(--purple);color:#fff;
+         border-bottom:3px solid var(--gold);box-shadow:var(--shadow)}
+  .hwrap{max-width:1080px;margin:0 auto;padding:11px 18px;
+         display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .brand{font-size:17px;font-weight:700;letter-spacing:.6px;flex:1;min-width:130px}
+  .brand em{color:var(--gold);font-style:normal}
+  header input,header select{background:rgba(255,255,255,.13);color:#fff;
+        border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:7px 10px;font:inherit;font-size:14px}
+  @media(max-width:520px){
+    .brand{flex:1 0 100%;margin-bottom:2px}
+    header select{flex:1;min-width:0} header input{flex:1;min-width:0} header button{flex:0 0 auto}
+  }
+  header input::-webkit-calendar-picker-indicator{filter:invert(1)}
+  header option{color:#1E1728}
+  header button{background:var(--gold);color:#3C1A5E;border:0;border-radius:7px;
+                padding:8px 15px;font:600 14px/1 inherit;cursor:pointer}
+
+  main{max-width:1080px;margin:0 auto;padding:18px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+          padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+  section > h2{margin:0 0 14px;font-size:13px;font-weight:700;color:var(--purple);
+               letter-spacing:1.4px;text-transform:uppercase;display:flex;align-items:center;gap:9px}
+  section > h2::after{content:"";flex:1;height:2px;background:var(--purple-pale);border-radius:2px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:11px}
+  .kpi{background:linear-gradient(160deg,#FBFAFD,#F4F1F9);border:1px solid var(--line);
+       border-radius:10px;padding:13px 14px}
   .kpi .k{font-size:12px;color:var(--dim)}
-  .kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+  .kpi .v{font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;color:var(--purple-dk)}
   .kpi .d{font-size:12px;color:var(--dim);margin-top:2px}
+
   table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-  th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;font-size:14px}
-  th{color:var(--dim);font-weight:500;font-size:12px}
+  th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:right;font-size:14px}
+  th{color:var(--dim);font-weight:600;font-size:12px;letter-spacing:.4px}
   th:first-child,td:first-child{text-align:left}
-  .track{background:#0d0b0a;border-radius:4px;height:7px;overflow:hidden;min-width:60px}
-  .fill{background:var(--accent);height:100%}
-  .chart{display:flex;align-items:flex-end;gap:2px;height:140px;
-         overflow-x:auto;padding-top:8px;border-bottom:1px solid var(--line)}
-  .col{flex:1;min-width:9px;background:var(--accent);border-radius:2px 2px 0 0;position:relative}
-  .col:hover{background:#e5bb37}
+  tr:last-child td{border-bottom:0}
+
+  .track{background:var(--purple-pale);border-radius:4px;height:8px;overflow:hidden;min-width:56px}
+  .fill{background:linear-gradient(90deg,var(--purple),var(--purple-lt));height:100%}
+  .chart{display:flex;align-items:flex-end;gap:3px;height:150px;overflow-x:auto;
+         padding-top:10px;border-bottom:2px solid var(--line)}
+  .col{flex:1;min-width:10px;background:linear-gradient(180deg,var(--purple-lt),var(--purple));
+       border-radius:3px 3px 0 0;position:relative;min-height:2px}
+  .col:hover{background:var(--gold)}
+
+  input,select{background:#fff;color:var(--ink);border:1.5px solid var(--line);
+               border-radius:8px;padding:8px 10px;font:inherit;width:100%}
+  input:focus,select:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(85,37,131,.13)}
+  input[type=number]{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  button.act{background:var(--purple);color:#fff;border:0;border-radius:8px;padding:10px 16px;
+             font:600 14px/1 inherit;cursor:pointer}
+  button.act:hover{background:var(--purple-dk)}
+  button.sm{background:#fff;color:var(--purple);border:1.5px solid var(--line);border-radius:7px;
+            padding:6px 11px;font:600 13px/1 inherit;cursor:pointer;white-space:nowrap}
+  button.sm:hover{background:var(--purple-pale)}
+
+  .setrow{display:grid;grid-template-columns:1fr 118px;gap:10px;align-items:center;margin-bottom:9px}
+  .staffrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .staffrow:last-child{border-bottom:0}
+  .staffrow .nm{flex:1;font-weight:500}
+  .staffrow.off .nm{color:var(--dim);text-decoration:line-through}
+
   .ok{color:var(--ok)} .bad{color:var(--bad)} .dim{color:var(--dim)}
-  .empty{color:var(--dim);text-align:center;padding:24px 0}
+  .empty{color:var(--dim);text-align:center;padding:22px 0}
   .scroll{overflow-x:auto}
-  nav a{color:var(--accent);text-decoration:none;font-size:13px}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{background:#fff;border:1.5px solid var(--line);color:var(--dim);border-radius:20px;
+       padding:7px 16px;font:600 14px/1 inherit;cursor:pointer}
+  .tab.on{background:var(--purple);border-color:var(--purple);color:#fff}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:50;
+         max-width:min(520px,92vw);padding:12px 16px;border-radius:10px;font-size:14px;
+         display:none;box-shadow:0 6px 24px rgba(30,23,40,.22)}
+  .toast.show{display:block}
+  .toast.e{background:#FDECEC;border:1.5px solid var(--bad);color:#7F1D1D}
+  .toast.s{background:#E8F5ED;border:1.5px solid var(--ok);color:#14532D}
 </style>
 </head>
 <body>
+
 <header>
-  <h1>營運報表</h1>
-  <select id="store"><option value="dazhong">大忠店</option><option value="mrmyth">謎先生</option></select>
-  <input type="month" id="month">
-  <button onclick="loadAll()">查詢</button>
+  <div class="hwrap">
+    <div class="brand">勃根地密室 <em>／</em> 營運報表</div>
+    <select id="store"><option value="dazhong">大忠店</option><option value="mrmyth">謎先生</option></select>
+    <input type="month" id="month">
+    <button onclick="loadAll()">查詢</button>
+  </div>
 </header>
 
 <main>
-  <section>
-    <h2>本月總覽</h2>
-    <div id="kpis" class="cards"><div class="empty">載入中…</div></div>
-  </section>
+  <div class="tabs">
+    <button class="tab on" data-v="report" onclick="tab('report')">報表</button>
+    <button class="tab" data-v="settings" onclick="tab('settings')">設定</button>
+  </div>
 
-  <section>
-    <h2>每日營收</h2>
-    <div id="dailyChart" class="chart"></div>
-    <div id="dailyNote" class="dim" style="font-size:12px;margin-top:6px"></div>
-  </section>
+  <!-- ============ 報表 ============ -->
+  <div id="v-report">
+    <section>
+      <h2>本月總覽</h2>
+      <div id="kpis" class="cards"><div class="empty">載入中…</div></div>
+    </section>
 
-  <section>
-    <h2>各房間表現</h2>
-    <div class="scroll"><table id="rooms"></table></div>
-  </section>
+    <section>
+      <h2>每日營收</h2>
+      <div id="dailyChart" class="chart"></div>
+      <div id="dailyNote" class="dim" style="font-size:12px;margin-top:8px"></div>
+    </section>
 
-  <section>
-    <h2>收款方式分布</h2>
-    <div class="scroll"><table id="methods"></table></div>
-  </section>
+    <section><h2>各房間表現</h2><div class="scroll"><table id="rooms"></table></div></section>
+    <section><h2>收款方式分布</h2><div class="scroll"><table id="methods"></table></div></section>
+    <section><h2>星期別平均</h2><div class="scroll"><table id="weekday"></table></div></section>
+    <section><h2>時段熱度</h2><div class="scroll"><table id="hours"></table></div></section>
 
-  <section>
-    <h2>星期別平均</h2>
-    <div class="scroll"><table id="weekday"></table></div>
-  </section>
+    <section>
+      <h2>逐月趨勢</h2>
+      <div id="trendChart" class="chart"></div>
+      <div class="scroll" style="margin-top:12px"><table id="trend"></table></div>
+    </section>
 
-  <section>
-    <h2>時段熱度</h2>
-    <div class="scroll"><table id="hours"></table></div>
-  </section>
+    <section><h2>對帳品質</h2><div id="quality"></div></section>
+  </div>
 
-  <section>
-    <h2>逐月趨勢（近 12 個月）</h2>
-    <div id="trendChart" class="chart"></div>
-    <div class="scroll"><table id="trend"></table></div>
-  </section>
+  <!-- ============ 設定 ============ -->
+  <div id="v-settings" style="display:none">
+    <section>
+      <h2>房間定價</h2>
+      <div class="dim" style="font-size:13px;margin-bottom:12px">
+        設定每人定價後，結帳頁面新增場次時填人數就會自動算出金額（店員仍可手動調整）。
+      </div>
+      <div id="priceRows"></div>
+      <button class="act" style="width:100%;margin-top:10px" onclick="savePrices()">儲存定價</button>
+    </section>
 
-  <section>
-    <h2>對帳品質</h2>
-    <div id="quality"></div>
-    <div style="margin-top:10px"><nav><a href="/closing.html">→ 前往打烊結帳</a></nav></div>
-  </section>
+    <section>
+      <h2>員工名單</h2>
+      <div class="dim" style="font-size:13px;margin-bottom:12px">
+        停用不會刪除紀錄 —— 已結的帳一律保留當時的姓名。
+      </div>
+      <div id="staffRows"></div>
+      <div style="display:flex;gap:9px;margin-top:12px">
+        <input id="newStaff" placeholder="輸入姓名新增" style="flex:1">
+        <button class="act" onclick="addStaff()">新增</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>解鎖日結單</h2>
+      <div class="dim" style="font-size:13px;margin-bottom:12px">
+        已結帳的單子鎖定後店員無法修改。結錯帳時由你解鎖，解鎖原因會寫進異動紀錄。
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:9px">
+        <input type="date" id="unlockDate">
+        <button class="act" onclick="reopen()">解鎖</button>
+      </div>
+    </section>
+  </div>
 </main>
+
+<div id="toast" class="toast"></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const nf = (n) => (n ?? 0).toLocaleString('zh-TW');
 const money = (n) => 'NT$' + nf(n);
+const num = (v) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? n : 0; };
+const KEY = 'bgl_key';
+let ROOMS = [], STAFF = [];
+
+function toast(msg, kind = 's') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = `toast show ${kind}`;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), kind === 'e' ? 8000 : 3500);
+}
 
 function apiKey() {
-  let k = localStorage.getItem('bgl_key');
-  if (!k) { k = prompt('請輸入 API 金鑰：') || ''; if (k) localStorage.setItem('bgl_key', k); }
+  let k = localStorage.getItem(KEY);
+  if (!k) { k = prompt('請輸入店內密碼：') || ''; if (k) localStorage.setItem(KEY, k); }
   return k;
 }
 
-async function api(path) {
-  const res = await fetch(path, { headers: { 'X-Api-Key': apiKey() } });
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey(), ...(opts.headers || {}) },
+  });
   const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401) localStorage.removeItem(KEY);
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
   return data;
 }
 
+function tab(v) {
+  document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
+  $('v-report').style.display   = v === 'report' ? 'block' : 'none';
+  $('v-settings').style.display = v === 'settings' ? 'block' : 'none';
+  if (v === 'settings') loadSettings();
+}
+
+// ================= 報表 =================
 async function loadAll() {
-  const store = $('store').value;
-  const month = $('month').value;
+  const store = $('store').value, month = $('month').value;
   localStorage.setItem('bgl_store', store);
   try {
     const [m, t] = await Promise.all([
@@ -130,9 +234,7 @@ async function loadAll() {
   }
 }
 
-function kpi(k, v, d = '') {
-  return `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
-}
+const kpi = (k, v, d = '') => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
 
 function renderMonthly(r) {
   const s = r.summary;
@@ -142,74 +244,57 @@ function renderMonthly(r) {
     kpi('人次', nf(s.headcount), `${nf(s.sessions)} 場`),
     kpi('客單價', money(s.avgPerCustomer), `每場 ${money(s.avgPerSession)}`),
     kpi('日均營收', money(s.avgPerDay)),
-    kpi('帳差天數', `${s.varianceDays} 天`, `累計差額 ${money(s.absVariance)}`),
+    kpi('帳差天數', `${s.varianceDays} 天`, `累計 ${money(s.absVariance)}`),
   ].join('');
 
-  // 每日長條圖
   const max = Math.max(1, ...r.daily.map((d) => d.revenue));
   $('dailyChart').innerHTML = r.daily.map((d) =>
     `<div class="col" style="height:${(d.revenue / max) * 100}%"
-       title="${d.date}　${money(d.revenue)}　${d.headcount} 人 / ${d.sessions} 場"></div>`
-  ).join('') || '<div class="empty">本月尚無已結帳的日期</div>';
-  $('dailyNote').textContent = r.daily.length
-    ? `最高 ${money(max)}　共 ${r.daily.length} 天（滑過長條可看細節）` : '';
+      title="${d.date}　${money(d.revenue)}　${d.headcount} 人 / ${d.sessions} 場"></div>`).join('')
+    || '<div class="empty">本月尚無已結帳的日期</div>';
+  $('dailyNote').textContent = r.daily.length ? `最高 ${money(max)}　共 ${r.daily.length} 天（滑過長條看細節）` : '';
 
-  bars('rooms', ['房間', '場次', '人次', '營收', '佔比'], r.byRoom, (x) => [
-    `${x.roomCode || ''} ${x.roomName || ''}`, nf(x.sessions), nf(x.headcount), money(x.revenue), x.share,
-  ]);
-
-  bars('methods', ['收款方式', '金額', '佔比'], r.byPaymentMethod, (x) => [
-    methodLabel(x.method), money(x.amount), x.share,
-  ]);
-
-  simple('weekday', ['星期', '天數', '平均營收', '總營收', '人次'], r.byWeekday, (x) => [
-    x.label, nf(x.days), money(x.avgRevenue), money(x.revenue), nf(x.headcount),
-  ]);
-
-  simple('hours', ['時段', '場次', '人次', '營收'], r.byHour, (x) => [
-    `${x.hour}:00`, nf(x.sessions), nf(x.headcount), money(x.revenue),
-  ]);
+  bars('rooms', ['房間', '場次', '人次', '營收', '佔比'], r.byRoom,
+    (x) => [`${x.roomCode || ''} ${x.roomName || ''}`, nf(x.sessions), nf(x.headcount), money(x.revenue), x.share]);
+  bars('methods', ['收款方式', '金額', '佔比'], r.byPaymentMethod,
+    (x) => [methodLabel(x.method), money(x.amount), x.share]);
+  simple('weekday', ['星期', '天數', '平均營收', '總營收', '人次'], r.byWeekday,
+    (x) => [x.label, nf(x.days), money(x.avgRevenue), money(x.revenue), nf(x.headcount)]);
+  simple('hours', ['時段', '場次', '人次', '營收'], r.byHour,
+    (x) => [`${x.hour}:00`, nf(x.sessions), nf(x.headcount), money(x.revenue)]);
 
   const bad = r.daily.filter((d) => d.variance || d.cashVariance);
   $('quality').innerHTML = bad.length
-    ? `<table><tr><th>日期</th><th>帳款差額</th><th>現金差額</th></tr>` +
-      bad.map((d) => `<tr><td>${d.date}</td>
-        <td class="${d.variance ? 'bad' : 'ok'}">${nf(d.variance)}</td>
-        <td class="${d.cashVariance ? 'bad' : 'ok'}">${nf(d.cashVariance)}</td></tr>`).join('') +
-      `</table>`
+    ? `<table><tr><th>日期</th><th>帳款差額</th><th>現金差額</th></tr>` + bad.map((d) =>
+        `<tr><td>${d.date}</td>
+          <td class="${d.variance ? 'bad' : 'ok'}">${nf(d.variance)}</td>
+          <td class="${d.cashVariance ? 'bad' : 'ok'}">${nf(d.cashVariance)}</td></tr>`).join('') + `</table>`
     : '<div class="ok">本月每一天帳款都完全相符 ✓</div>';
 }
 
-// 帶佔比進度條的表格（最後一欄是百分比）
 function bars(id, head, rows, map) {
   if (!rows.length) { $(id).innerHTML = `<tr><td class="empty">尚無資料</td></tr>`; return; }
-  $(id).innerHTML =
-    `<tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>` +
-    rows.map((x) => {
-      const cells = map(x);
-      const share = cells.pop();
-      return `<tr>${cells.map((c, i) => `<td${i === 0 ? '' : ''}>${c}</td>`).join('')}
-        <td style="min-width:110px"><div style="display:flex;gap:6px;align-items:center;justify-content:flex-end">
-          <div class="track" style="flex:1"><div class="fill" style="width:${share}%"></div></div>
-          <span class="dim">${share}%</span></div></td></tr>`;
-    }).join('');
+  $(id).innerHTML = `<tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>` + rows.map((x) => {
+    const cells = map(x); const share = cells.pop();
+    return `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}
+      <td style="min-width:112px"><div style="display:flex;gap:7px;align-items:center;justify-content:flex-end">
+        <div class="track" style="flex:1"><div class="fill" style="width:${share}%"></div></div>
+        <span class="dim">${share}%</span></div></td></tr>`;
+  }).join('');
 }
 
 function simple(id, head, rows, map) {
   if (!rows.length) { $(id).innerHTML = `<tr><td class="empty">尚無資料</td></tr>`; return; }
-  $(id).innerHTML =
-    `<tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>` +
+  $(id).innerHTML = `<tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>` +
     rows.map((x) => `<tr>${map(x).map((c) => `<td>${c}</td>`).join('')}</tr>`).join('');
 }
 
 function renderTrend(t) {
   const max = Math.max(1, ...t.series.map((m) => m.revenue));
   $('trendChart').innerHTML = t.series.map((m) =>
-    `<div class="col" style="height:${(m.revenue / max) * 100}%" title="${m.month}　${money(m.revenue)}"></div>`
-  ).join('');
+    `<div class="col" style="height:${(m.revenue / max) * 100}%" title="${m.month}　${money(m.revenue)}"></div>`).join('');
 
-  const pct = (v) => v === null || v === undefined
-    ? '<span class="dim">—</span>'
+  const pct = (v) => v == null ? '<span class="dim">—</span>'
     : `<span class="${v >= 0 ? 'ok' : 'bad'}">${v >= 0 ? '+' : ''}${v}%</span>`;
 
   $('trend').innerHTML =
@@ -220,19 +305,92 @@ function renderTrend(t) {
       <td>${nf(m.headcount)}</td><td>${money(m.avgPerCustomer)}</td></tr>`).join('');
 }
 
-function methodLabel(k) {
-  return ({
-    cash: '現金', credit_card: '信用卡', linepay: 'LINE Pay', jkopay: '街口支付',
-    twpay: '台灣 Pay', transfer: '銀行轉帳', prepaid: '線上預付/訂金', other: '其他',
-  })[k] || k;
+const methodLabel = (k) => ({
+  cash: '現金', credit_card: '信用卡', linepay: 'LINE Pay', jkopay: '街口支付',
+  twpay: '台灣 Pay', transfer: '銀行轉帳', prepaid: '線上預付/訂金', other: '其他',
+})[k] || k;
+
+// ================= 設定 =================
+async function loadSettings() {
+  const store = $('store').value;
+  try {
+    const [r, s] = await Promise.all([
+      api(`/api/rooms?store=${store}`),
+      api(`/api/staff?store=${store}&all=1`),
+    ]);
+    ROOMS = r.rooms; STAFF = s.staff;
+    renderPrices(); renderStaff();
+  } catch (e) { toast('載入設定失敗：' + e.message, 'e'); }
 }
 
+function renderPrices() {
+  $('priceRows').innerHTML = ROOMS.map((r) => `
+    <div class="setrow">
+      <span>${r.roomCode}　${r.name}</span>
+      <input type="number" min="0" step="1" data-p="${r.serviceId}" value="${r.unitPrice || ''}" placeholder="每人">
+    </div>`).join('') || '<div class="empty">尚無房間資料</div>';
+}
+
+async function savePrices() {
+  const rooms = [...document.querySelectorAll('#priceRows [data-p]')]
+    .map((el) => ({ serviceId: Number(el.dataset.p), unitPrice: num(el.value) }));
+  try {
+    const r = await api('/api/rooms', { method: 'PATCH', body: JSON.stringify({ rooms }) });
+    ROOMS = r.rooms; renderPrices();
+    toast(r.message);
+  } catch (e) { toast('儲存失敗：' + e.message, 'e'); }
+}
+
+function renderStaff() {
+  $('staffRows').innerHTML = STAFF.map((s) => `
+    <div class="staffrow ${s.active ? '' : 'off'}">
+      <span class="nm">${s.name}</span>
+      <button class="sm" onclick="toggleStaff(${s.id}, ${!s.active})">${s.active ? '停用' : '復職'}</button>
+    </div>`).join('') || '<div class="empty">還沒有員工，請在下方新增</div>';
+}
+
+async function addStaff() {
+  const name = $('newStaff').value.trim();
+  if (!name) return toast('請輸入姓名', 'e');
+  try {
+    const r = await api('/api/staff', {
+      method: 'POST', body: JSON.stringify({ name, storeCode: $('store').value }),
+    });
+    $('newStaff').value = '';
+    toast(r.message);
+    loadSettings();
+  } catch (e) { toast('新增失敗：' + e.message, 'e'); }
+}
+
+async function toggleStaff(id, active) {
+  try {
+    const r = await api('/api/staff', { method: 'PATCH', body: JSON.stringify({ id, active }) });
+    toast(r.message);
+    loadSettings();
+  } catch (e) { toast('操作失敗：' + e.message, 'e'); }
+}
+
+async function reopen() {
+  const date = $('unlockDate').value;
+  if (!date) return toast('請選擇要解鎖的日期', 'e');
+  const reason = prompt('請說明解鎖原因：');
+  if (!reason) return;
+  try {
+    const r = await api('/api/closing/reopen', {
+      method: 'POST',
+      body: JSON.stringify({ storeCode: $('store').value, businessDate: date, reason, actor: '老闆' }),
+    });
+    toast(r.message);
+  } catch (e) { toast('解鎖失敗：' + e.message, 'e'); }
+}
+
+// ================= 啟動 =================
 (function init() {
   const now = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(new Date());
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   $('month').value = now.slice(0, 7);
   $('store').value = localStorage.getItem('bgl_store') || 'dazhong';
+  $('store').addEventListener('change', () => { loadAll(); if ($('v-settings').style.display === 'block') loadSettings(); });
   loadAll();
 })();
 </script>

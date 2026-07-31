@@ -42,6 +42,20 @@ CREATE INDEX IF NOT EXISTS bookings_date_idx  ON bookings (business_date, store_
 CREATE INDEX IF NOT EXISTS bookings_store_idx ON bookings (store_code);
 
 -- ---------------------------------------------------------------------------
+-- 員工名單（結帳頁面的下拉選單來源）
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS staff (
+  id         SERIAL PRIMARY KEY,
+  name       TEXT    NOT NULL,
+  store_code TEXT    NOT NULL DEFAULT 'dazhong',
+  active     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT staff_unique_name UNIQUE (store_code, name)
+);
+
+CREATE INDEX IF NOT EXISTS staff_store_idx ON staff (store_code, active);
+
+-- ---------------------------------------------------------------------------
 -- 日結單
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS daily_closings (
@@ -65,7 +79,8 @@ CREATE TABLE IF NOT EXISTS daily_closings (
 
   variance_reason   TEXT,                        -- 差額說明（有差額時必填）
   notes             TEXT,
-  submitted_by      TEXT,
+  staff_id          INTEGER REFERENCES staff (id),
+  submitted_by      TEXT,                        -- 姓名快照：員工改名或停用後，歷史紀錄不變
   submitted_at      TIMESTAMPTZ,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -148,6 +163,12 @@ CREATE TABLE IF NOT EXISTS closing_audit_log (
 );
 
 CREATE INDEX IF NOT EXISTS closing_audit_closing_idx ON closing_audit_log (closing_id);
+
+-- ---------------------------------------------------------------------------
+-- 後續新增的欄位
+-- CREATE TABLE IF NOT EXISTS 不會幫既有的表補欄位，所以另外列出來
+-- ---------------------------------------------------------------------------
+ALTER TABLE daily_closings ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES staff (id);
 
 -- ---------------------------------------------------------------------------
 -- 房間種子資料（沿用 SERVICE_MAP，unit_price 之後用後台或 SQL 調整）

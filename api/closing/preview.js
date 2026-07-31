@@ -14,6 +14,7 @@ import {
   EXPENSE_CATEGORIES,
   DENOMINATIONS,
 } from "../_lib/closing.js";
+import { missingClosings } from "../_lib/stats.js";
 import { fetchDayBookings, DEFAULT_STORE } from "../_simplybook.js";
 
 export default handler(async (req, res) => {
@@ -21,12 +22,13 @@ export default handler(async (req, res) => {
   const storeCode = req.query.store || DEFAULT_STORE;
   const date      = assertDate(req.query.date || defaultBusinessDate(), "date");
 
-  // 房間清單讓結帳頁面能手動選房間、並用定價自動算金額
-  const roomRows = await sql`
-    SELECT service_id, room_code, name, unit_price FROM rooms
-    WHERE store_code = ${storeCode} AND active
-    ORDER BY room_code
-  `;
+  // 房間清單讓結帳頁面能手動選房間並用定價自動算金額；員工名單給結帳人員下拉
+  const [roomRows, staffRows] = await Promise.all([
+    sql`SELECT service_id, room_code, name, unit_price FROM rooms
+        WHERE store_code = ${storeCode} AND active ORDER BY room_code`,
+    sql`SELECT id, name FROM staff
+        WHERE store_code = ${storeCode} AND active ORDER BY name`,
+  ]);
 
   const meta = {
     paymentMethods:    PAYMENT_METHODS,
@@ -38,7 +40,11 @@ export default handler(async (req, res) => {
       name:      r.name,
       unitPrice: r.unit_price,
     })),
+    staff: staffRows.map((s) => ({ id: s.id, name: s.name })),
   };
+
+  // 前幾天有沒有漏結帳 —— 開頁面時就提醒，不要等到月底才發現
+  const pending = await missingClosings(sql, storeCode, shiftDays(date, -7), shiftDays(date, -1));
 
   // 已經有單子（草稿或已鎖定）就直接回既有內容，不要拿線上資料覆蓋店員填過的東西
   const existing = await loadClosing(sql, storeCode, date);
@@ -49,6 +55,7 @@ export default handler(async (req, res) => {
       businessDate: date,
       status: existing.closing.status,
       source: "saved",
+      pendingClosings: pending,
       closing: serializeClosing(existing),
       meta,
     });
@@ -72,6 +79,7 @@ export default handler(async (req, res) => {
     businessDate: date,
     status: "new",
     source: bookings.length ? "simplybook" : "empty",
+    pendingClosings: pending,
     closing: {
       status: "new",
       businessDate: date,
@@ -167,3 +175,9 @@ async function lastOpeningFloat(sql, storeCode) {
   return row?.opening_float ?? 0;
 }
 
+/** 日期加減天數，維持 YYYY-MM-DD */
+function shiftDays(dateStrIn, days) {
+  const d = new Date(`${dateStrIn}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}

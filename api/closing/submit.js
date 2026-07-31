@@ -8,9 +8,12 @@ import {
   saveClosing,
   normalizeClosing,
   serializeClosing,
+  findBlockers,
+  findWarnings,
   defaultBusinessDate,
   assertDate,
 } from "../_lib/closing.js";
+import { avgSameWeekday } from "../_lib/stats.js";
 import { DEFAULT_STORE } from "../_simplybook.js";
 
 /** 允許的誤差（元）。設為 0 表示必須完全相符。 */
@@ -23,24 +26,16 @@ export default handler(
     const storeCode = body.storeCode || DEFAULT_STORE;
     const date      = assertDate(body.businessDate || defaultBusinessDate(), "businessDate");
 
-    if (!body.submittedBy) throw fail(400, "請填寫結帳人員姓名");
+    if (!body.submittedBy) throw fail(400, "請選擇結帳人員");
 
     const data = normalizeClosing(body);
     const t    = data.totals;
 
-    // ---- 把關：差額 ----
-    const blockers = [];
+    if (t.session_count === 0 && !data.notes) {
+      throw fail(400, "當日沒有任何場次，請在備註說明（例如：公休）");
+    }
 
-    if (Math.abs(t.variance) > TOLERANCE) {
-      blockers.push(
-        `帳款差額 ${fmt(t.variance)} 元（應收 ${fmt(t.expected_revenue)}，實收 ${fmt(t.actual_total)}）`
-      );
-    }
-    if (Math.abs(t.cash_variance) > TOLERANCE) {
-      blockers.push(
-        `現金差額 ${fmt(t.cash_variance)} 元（櫃內應有 ${fmt(t.expected_cash)}，實際點鈔 ${fmt(t.cash_counted)}）`
-      );
-    }
+    const blockers = findBlockers(data, TOLERANCE);
 
     // 差額有填說明就放行，但一定要留下紀錄
     const forced = Boolean(body.forceSubmit) && Boolean(data.variance_reason);
@@ -54,16 +49,16 @@ export default handler(
       });
     }
 
-    if (t.session_count === 0 && !data.notes) {
-      throw fail(400, "當日沒有任何場次，請在備註說明（例如：公休）");
-    }
-
     await saveClosing(sql, {
       storeCode,
       businessDate: date,
       data,
       status: "locked",
       actor: data.submitted_by,
+    });
+
+    const warnings = findWarnings(data, {
+      avgSameWeekday: await avgSameWeekday(sql, storeCode, date),
     });
 
     const saved = await loadClosing(sql, storeCode, date);
@@ -73,12 +68,9 @@ export default handler(
         ? `已結帳（帶差額，原因：${data.variance_reason}）`
         : "已結帳，帳款相符",
       hadVariance: blockers.length > 0,
+      warnings,
       closing: serializeClosing(saved),
     });
   },
   { methods: ["POST"] }
 );
-
-function fmt(n) {
-  return n.toLocaleString("zh-TW");
-}

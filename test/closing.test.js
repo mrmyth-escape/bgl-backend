@@ -155,3 +155,91 @@ test("dateStr 能處理 Date 物件與字串", () => {
   assert.equal(dateStr(new Date("2026-03-15T00:00:00Z")), "2026-03-15");
   assert.equal(dateStr(null), null);
 });
+
+// ---------------------------------------------------------------------------
+// 送出前的把關規則
+// ---------------------------------------------------------------------------
+import { findBlockers, findWarnings } from "../api/_lib/closing.js";
+
+const balanced = {
+  openingFloat: 2000,
+  bookings: [{ roomCode: "A", roomName: "孤兒怨", headcount: 4, amount: 3200 }],
+  payments: [{ method: "cash", amount: 3200 }],
+  expenses: [],
+  cashCounts: { 1000: 5, 100: 2 }, // 5200 = 2000 + 3200
+};
+
+test("帳平時沒有任何阻擋", () => {
+  assert.deepEqual(findBlockers(normalizeClosing(balanced)), []);
+});
+
+test("帳款差額會被擋下，訊息含實際金額", () => {
+  const r = findBlockers(normalizeClosing({
+    ...balanced,
+    payments: [{ method: "cash", amount: 3000 }],
+    cashCounts: { 1000: 5 },
+  }));
+  assert.ok(r.some((m) => m.includes("帳款差額")), r.join("|"));
+  assert.ok(r.some((m) => m.includes("3,200")), "訊息應包含應收金額");
+});
+
+test("收了現金卻沒點鈔會被擋下", () => {
+  const r = findBlockers(normalizeClosing({ ...balanced, cashCounts: {}, cashCounted: 0 }));
+  assert.ok(r.some((m) => m.includes("尚未點鈔")), r.join("|"));
+});
+
+test("沒有現金收款時不會要求點鈔", () => {
+  const r = findBlockers(normalizeClosing({
+    ...balanced,
+    payments: [{ method: "credit_card", amount: 3200 }],
+    cashCounts: { 1000: 2 }, // 2000 = 零用金，現金無進出
+  }));
+  assert.deepEqual(r, []);
+});
+
+test("容許誤差可放行小額差異", () => {
+  const input = { ...balanced, payments: [{ method: "cash", amount: 3195 }], cashCounts: { 1000: 5, 100: 1, 10: 9, 5: 1 } };
+  const data = normalizeClosing(input);
+  assert.equal(data.totals.variance, -5);
+  assert.ok(findBlockers(data, 0).length > 0, "誤差 0 應該擋下");
+  assert.deepEqual(findBlockers(data, 10), [], "誤差 10 應該放行");
+});
+
+test("有人數但金額 0 會提醒（但不擋）", () => {
+  const data = normalizeClosing({
+    ...balanced,
+    bookings: [{ roomCode: "B", roomName: "屎力全開", time: "20:00", headcount: 5, amount: 0 }],
+    payments: [], cashCounts: { 1000: 2 },
+  });
+  assert.deepEqual(findBlockers(data), [], "金額 0 但帳平，不該擋");
+  const w = findWarnings(data);
+  assert.ok(w.some((m) => m.includes("屎力全開") && m.includes("5 人")), w.join("|"));
+});
+
+test("營收偏離同星期平均 40% 以上會提醒", () => {
+  const data = normalizeClosing(balanced); // 應收 3200
+  assert.deepEqual(findWarnings(data, { avgSameWeekday: 3000 }), [], "差 7% 不該提醒");
+  const low = findWarnings(data, { avgSameWeekday: 8000 });
+  assert.ok(low.some((m) => m.includes("-60%")), low.join("|"));
+  const high = findWarnings(data, { avgSameWeekday: 1000 });
+  assert.ok(high.some((m) => m.includes("220%")), high.join("|"));
+});
+
+test("沒有歷史基準時不做營收比較", () => {
+  assert.deepEqual(findWarnings(normalizeClosing(balanced), { avgSameWeekday: 0 }), []);
+});
+
+test("未到店的場次不會觸發金額 0 提醒", () => {
+  const data = normalizeClosing({
+    ...balanced,
+    bookings: [{ roomCode: "C", headcount: 6, amount: 0, attended: false }],
+    payments: [], cashCounts: { 1000: 2 },
+  });
+  assert.deepEqual(findWarnings(data), []);
+});
+
+test("staffId 會被帶進日結資料", () => {
+  assert.equal(normalizeClosing({ ...balanced, staffId: 7 }).staff_id, 7);
+  assert.equal(normalizeClosing({ ...balanced, staffId: "abc" }).staff_id, null);
+  assert.equal(normalizeClosing(balanced).staff_id, null);
+});

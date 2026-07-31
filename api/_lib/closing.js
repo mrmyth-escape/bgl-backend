@@ -167,8 +167,74 @@ export function normalizeClosing(input) {
     },
     variance_reason: input.varianceReason || null,
     notes:           input.notes || null,
+    staff_id:        Number.isInteger(Number(input.staffId)) ? Number(input.staffId) : null,
     submitted_by:    input.submittedBy || null,
   };
+}
+
+/**
+ * 送出前的把關。回傳的每一項都會擋下結帳，除非店員填了差額原因並確認送出。
+ * 純函式，方便測試。
+ * @param {ReturnType<typeof normalizeClosing>} data
+ * @param {number} tolerance 允許誤差（元）
+ */
+export function findBlockers(data, tolerance = 0) {
+  const t = data.totals;
+  const out = [];
+
+  if (Math.abs(t.variance) > tolerance) {
+    out.push(
+      `帳款差額 ${fmt(t.variance)} 元（應收 ${fmt(t.expected_revenue)}，實收 ${fmt(t.actual_total)}）`
+    );
+  }
+
+  if (Math.abs(t.cash_variance) > tolerance) {
+    out.push(
+      `現金差額 ${fmt(t.cash_variance)} 元（櫃內應有 ${fmt(t.expected_cash)}，實際點鈔 ${fmt(t.cash_counted)}）`
+    );
+  }
+
+  // 收了現金卻沒點鈔，會被當成 0 元硬算出一個假的差額 —— 先擋下來要求點鈔
+  const cashTaken = data.payments
+    .filter((p) => DRAWER_KEYS.has(p.method))
+    .reduce((s, p) => s + p.amount, 0);
+  if (cashTaken > 0 && t.cash_counted === 0) {
+    out.push(`有現金收款 ${fmt(cashTaken)} 元但尚未點鈔，請先清點錢櫃`);
+  }
+
+  return out;
+}
+
+/**
+ * 提醒事項：不擋結帳，只是提示店員再看一眼。
+ * @param {ReturnType<typeof normalizeClosing>} data
+ * @param {{ avgSameWeekday?: number }} context
+ */
+export function findWarnings(data, context = {}) {
+  const out = [];
+
+  for (const b of data.bookings) {
+    if (!b.attended) continue;
+    if (b.headcount > 0 && b.amount === 0) {
+      out.push(`${b.room_name || b.room_code || "某場次"} ${b.start_time || ""} 有 ${b.headcount} 人但金額是 0`);
+    }
+  }
+
+  const avg = context.avgSameWeekday;
+  if (avg > 0 && data.totals.expected_revenue > 0) {
+    const diff = (data.totals.expected_revenue - avg) / avg;
+    if (Math.abs(diff) >= 0.4) {
+      out.push(
+        `今日營收 ${fmt(data.totals.expected_revenue)} 元，與近期同星期平均 ${fmt(Math.round(avg))} 元相差 ${Math.round(diff * 100)}%`
+      );
+    }
+  }
+
+  return out;
+}
+
+function fmt(n) {
+  return n.toLocaleString("zh-TW");
 }
 
 /** DB 欄位 → API 欄位 */
@@ -199,6 +265,7 @@ export function serializeClosing({ closing, payments, expenses, cashCounts, book
     cashCounted:    closing.cash_counted,
     varianceReason: closing.variance_reason,
     notes:          closing.notes,
+    staffId:        closing.staff_id,
     submittedBy:    closing.submitted_by,
     submittedAt:    closing.submitted_at,
     bookings:       bookings.map(toApiBooking),
@@ -278,6 +345,7 @@ export async function saveClosing(sql, { storeCode, businessDate, data, status, 
       session_count:    t.session_count,
       variance_reason:  data.variance_reason,
       notes:            data.notes,
+      staff_id:         data.staff_id,
       submitted_by:     data.submitted_by,
       submitted_at:     status === "locked" ? new Date() : null,
       updated_at:       new Date(),
