@@ -12,7 +12,7 @@ import {
   defaultBusinessDate,
   assertDate,
 } from "../_lib/closing.js";
-import { DEFAULT_STORE } from "../_simplybook.js";
+import { DEFAULT_STORE } from "../_lib/store.js";
 
 export default handler(
   async (req, res) => {

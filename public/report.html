@@ -124,10 +124,9 @@
       <div id="dailyNote" class="dim" style="font-size:12px;margin-top:8px"></div>
     </section>
 
-    <section><h2>各房間表現</h2><div class="scroll"><table id="rooms"></table></div></section>
+    <section><h2>各項收入</h2><div class="scroll"><table id="rooms"></table></div></section>
     <section><h2>收款方式分布</h2><div class="scroll"><table id="methods"></table></div></section>
     <section><h2>星期別平均</h2><div class="scroll"><table id="weekday"></table></div></section>
-    <section><h2>時段熱度</h2><div class="scroll"><table id="hours"></table></div></section>
 
     <section>
       <h2>逐月趨勢</h2>
@@ -141,12 +140,30 @@
   <!-- ============ 設定 ============ -->
   <div id="v-settings" style="display:none">
     <section>
-      <h2>房間定價</h2>
+      <h2>收入項目</h2>
       <div class="dim" style="font-size:13px;margin-bottom:12px">
-        設定每人定價後，結帳頁面新增場次時填人數就會自動算出金額（店員仍可手動調整）。
+        結帳頁面左欄會依這個清單逐項填寫，順序也照這裡。
       </div>
-      <div id="priceRows"></div>
-      <button class="act" style="width:100%;margin-top:10px" onclick="savePrices()">儲存定價</button>
+      <div id="revRows"></div>
+      <div style="display:flex;gap:9px;margin-top:12px">
+        <input id="newRev" placeholder="新增收入項目" style="flex:1">
+        <button class="act" onclick="addItem('revenue')">新增</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>收款方式</h2>
+      <div class="dim" style="font-size:13px;margin-bottom:12px">
+        標示為「現金」的方式才會納入現金櫃結算。
+      </div>
+      <div id="payRows"></div>
+      <div style="display:flex;gap:9px;margin-top:12px">
+        <input id="newPay" placeholder="新增收款方式" style="flex:1">
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--dim);white-space:nowrap">
+          <input type="checkbox" id="newPayCash" style="width:auto">現金
+        </label>
+        <button class="act" onclick="addItem('payment')">新增</button>
+      </div>
     </section>
 
     <section>
@@ -182,7 +199,7 @@ const nf = (n) => (n ?? 0).toLocaleString('zh-TW');
 const money = (n) => 'NT$' + nf(n);
 const num = (v) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? n : 0; };
 const KEY = 'bgl_key';
-let ROOMS = [], STAFF = [];
+let REV = [], PAY = [], STAFF = [];
 
 function toast(msg, kind = 's') {
   const t = $('toast');
@@ -239,29 +256,26 @@ const kpi = (k, v, d = '') => `<div class="kpi"><div class="k">${k}</div><div cl
 function renderMonthly(r) {
   const s = r.summary;
   $('kpis').innerHTML = [
-    kpi('營收', money(s.revenue), `${s.daysClosed} 天已結帳`),
-    kpi('扣除雜支', money(s.netRevenue), `雜支 ${money(s.expenseTotal)}`),
-    kpi('人次', nf(s.headcount), `${nf(s.sessions)} 場`),
-    kpi('客單價', money(s.avgPerCustomer), `每場 ${money(s.avgPerSession)}`),
-    kpi('日均營收', money(s.avgPerDay)),
+    kpi('收款總計', money(s.revenue), `${s.daysClosed} 天已結帳`),
+    kpi('收入小計', money(s.grossRevenue), `折扣 ${money(s.discountTotal)}（${s.discountRate}%）`),
+    kpi('扣除支出', money(s.netRevenue), `支出 ${money(s.expenseTotal)}`),
+    kpi('日均收款', money(s.avgPerDay)),
     kpi('帳差天數', `${s.varianceDays} 天`, `累計 ${money(s.absVariance)}`),
   ].join('');
 
   const max = Math.max(1, ...r.daily.map((d) => d.revenue));
   $('dailyChart').innerHTML = r.daily.map((d) =>
     `<div class="col" style="height:${(d.revenue / max) * 100}%"
-      title="${d.date}　${money(d.revenue)}　${d.headcount} 人 / ${d.sessions} 場"></div>`).join('')
+      title="${d.date}　收款 ${money(d.revenue)}　折扣 ${money(d.discount)}"></div>`).join('')
     || '<div class="empty">本月尚無已結帳的日期</div>';
   $('dailyNote').textContent = r.daily.length ? `最高 ${money(max)}　共 ${r.daily.length} 天（滑過長條看細節）` : '';
 
-  bars('rooms', ['房間', '場次', '人次', '營收', '佔比'], r.byRoom,
-    (x) => [`${x.roomCode || ''} ${x.roomName || ''}`, nf(x.sessions), nf(x.headcount), money(x.revenue), x.share]);
+  bars('rooms', ['收入項目', '有收入天數', '金額', '佔比'], r.byItem,
+    (x) => [x.itemName, nf(x.days), money(x.revenue), x.share]);
   bars('methods', ['收款方式', '金額', '佔比'], r.byPaymentMethod,
-    (x) => [methodLabel(x.method), money(x.amount), x.share]);
-  simple('weekday', ['星期', '天數', '平均營收', '總營收', '人次'], r.byWeekday,
-    (x) => [x.label, nf(x.days), money(x.avgRevenue), money(x.revenue), nf(x.headcount)]);
-  simple('hours', ['時段', '場次', '人次', '營收'], r.byHour,
-    (x) => [`${x.hour}:00`, nf(x.sessions), nf(x.headcount), money(x.revenue)]);
+    (x) => [x.method, money(x.amount), x.share]);
+  simple('weekday', ['星期', '天數', '平均收款', '總收款'], r.byWeekday,
+    (x) => [x.label, nf(x.days), money(x.avgRevenue), money(x.revenue)]);
 
   const bad = r.daily.filter((d) => d.variance || d.cashVariance);
   $('quality').innerHTML = bad.length
@@ -298,14 +312,14 @@ function renderTrend(t) {
     : `<span class="${v >= 0 ? 'ok' : 'bad'}">${v >= 0 ? '+' : ''}${v}%</span>`;
 
   $('trend').innerHTML =
-    `<tr><th>月份</th><th>營收</th><th>較上月</th><th>較去年同期</th><th>人次</th><th>客單價</th></tr>` +
+    `<tr><th>月份</th><th>收款</th><th>較上月</th><th>較去年同期</th><th>折扣</th><th>日均</th></tr>` +
     t.series.slice().reverse().map((m) => `<tr>
       <td>${m.month}</td><td>${money(m.revenue)}</td>
       <td>${pct(m.momChange)}</td><td>${pct(m.yoyChange)}</td>
-      <td>${nf(m.headcount)}</td><td>${money(m.avgPerCustomer)}</td></tr>`).join('');
+      <td>${money(m.discount)}</td><td>${money(m.avgPerDay)}</td></tr>`).join('');
 }
 
-const methodLabel = (k) => ({
+const _unusedMethodLabel = (k) => ({
   cash: '現金', credit_card: '信用卡', linepay: 'LINE Pay', jkopay: '街口支付',
   twpay: '台灣 Pay', transfer: '銀行轉帳', prepaid: '線上預付/訂金', other: '其他',
 })[k] || k;
@@ -314,31 +328,50 @@ const methodLabel = (k) => ({
 async function loadSettings() {
   const store = $('store').value;
   try {
-    const [r, s] = await Promise.all([
-      api(`/api/rooms?store=${store}`),
+    const [c, st] = await Promise.all([
+      api(`/api/settings?store=${store}&all=1`),
       api(`/api/staff?store=${store}&all=1`),
     ]);
-    ROOMS = r.rooms; STAFF = s.staff;
-    renderPrices(); renderStaff();
+    REV = c.revenueItems; PAY = c.paymentMethods; STAFF = st.staff;
+    renderItems(); renderStaff();
   } catch (e) { toast('載入設定失敗：' + e.message, 'e'); }
 }
 
-function renderPrices() {
-  $('priceRows').innerHTML = ROOMS.map((r) => `
-    <div class="setrow">
-      <span>${r.roomCode}　${r.name}</span>
-      <input type="number" min="0" step="1" data-p="${r.serviceId}" value="${r.unitPrice || ''}" placeholder="每人">
-    </div>`).join('') || '<div class="empty">尚無房間資料</div>';
+function renderItems() {
+  $('revRows').innerHTML = REV.map((r) => `
+    <div class="staffrow ${r.active ? '' : 'off'}">
+      <span class="nm">${r.name}</span>
+      <button class="sm" onclick="toggleItem('revenue', ${r.id}, ${!r.active})">${r.active ? '停用' : '啟用'}</button>
+    </div>`).join('') || '<div class="empty">尚無項目</div>';
+
+  $('payRows').innerHTML = PAY.map((p) => `
+    <div class="staffrow ${p.active ? '' : 'off'}">
+      <span class="nm">${p.name}${p.isCash ? ' <span style="color:var(--gold-dk);font-size:12px">現金</span>' : ''}</span>
+      <button class="sm" onclick="toggleItem('payment', ${p.id}, ${!p.active})">${p.active ? '停用' : '啟用'}</button>
+    </div>`).join('') || '<div class="empty">尚無項目</div>';
 }
 
-async function savePrices() {
-  const rooms = [...document.querySelectorAll('#priceRows [data-p]')]
-    .map((el) => ({ serviceId: Number(el.dataset.p), unitPrice: num(el.value) }));
+async function addItem(kind) {
+  const input = kind === 'revenue' ? $('newRev') : $('newPay');
+  const name = input.value.trim();
+  if (!name) return toast('請輸入名稱', 'e');
   try {
-    const r = await api('/api/rooms', { method: 'PATCH', body: JSON.stringify({ rooms }) });
-    ROOMS = r.rooms; renderPrices();
+    const body = { kind, name, storeCode: $('store').value };
+    if (kind === 'payment') body.isCash = $('newPayCash').checked;
+    const r = await api('/api/settings', { method: 'POST', body: JSON.stringify(body) });
+    input.value = '';
+    if (kind === 'payment') $('newPayCash').checked = false;
     toast(r.message);
-  } catch (e) { toast('儲存失敗：' + e.message, 'e'); }
+    loadSettings();
+  } catch (e) { toast('新增失敗：' + e.message, 'e'); }
+}
+
+async function toggleItem(kind, id, active) {
+  try {
+    const r = await api('/api/settings', { method: 'PATCH', body: JSON.stringify({ kind, id, active }) });
+    toast(r.message);
+    loadSettings();
+  } catch (e) { toast('操作失敗：' + e.message, 'e'); }
 }
 
 function renderStaff() {

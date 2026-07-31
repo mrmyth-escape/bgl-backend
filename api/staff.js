@@ -7,7 +7,7 @@
 
 import { db } from "./_lib/db.js";
 import { handler, readBody, fail } from "./_lib/http.js";
-import { DEFAULT_STORE } from "./_simplybook.js";
+import { DEFAULT_STORE } from "./_lib/store.js";
 
 const MAX_NAME = 20;
 

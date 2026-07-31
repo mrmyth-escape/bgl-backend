@@ -4,7 +4,7 @@
 import { db } from "../_lib/db.js";
 import { handler } from "../_lib/http.js";
 import { toTaipeiDate } from "../_lib/closing.js";
-import { DEFAULT_STORE } from "../_simplybook.js";
+import { DEFAULT_STORE } from "../_lib/store.js";
 
 export default handler(async (req, res) => {
   const sql       = db();
@@ -18,9 +18,9 @@ export default handler(async (req, res) => {
     SELECT to_char(business_date, 'YYYY-MM')        AS month,
            COUNT(*)::int                            AS days,
            COALESCE(SUM(actual_total),0)::int       AS revenue,
-           COALESCE(SUM(expense_total),0)::int      AS expense,
-           COALESCE(SUM(headcount_total),0)::int    AS headcount,
-           COALESCE(SUM(session_count),0)::int      AS sessions
+           COALESCE(SUM(expected_revenue),0)::int   AS gross_revenue,
+           COALESCE(SUM(discount_total),0)::int     AS discount,
+           COALESCE(SUM(expense_total),0)::int      AS expense
     FROM daily_closings
     WHERE store_code = ${storeCode} AND status = 'locked'
       AND business_date >= ${`${from}-01`}
@@ -35,21 +35,19 @@ export default handler(async (req, res) => {
   for (let i = 0; i < months; i++) {
     const month = shiftMonth(from, i);
     const r = byMonth.get(month);
-    const revenue   = r?.revenue   ?? 0;
-    const headcount = r?.headcount ?? 0;
-    const sessions  = r?.sessions  ?? 0;
-    const expense   = r?.expense   ?? 0;
+    const revenue  = r?.revenue  ?? 0;
+    const expense  = r?.expense  ?? 0;
+    const discount = r?.discount ?? 0;
 
     series.push({
       month,
-      days:           r?.days ?? 0,
+      days:         r?.days ?? 0,
       revenue,
+      grossRevenue: r?.gross_revenue ?? 0,
+      discount,
       expense,
-      netRevenue:     revenue - expense,
-      headcount,
-      sessions,
-      avgPerCustomer: headcount ? Math.round(revenue / headcount) : 0,
-      avgPerDay:      r?.days ? Math.round(revenue / r.days) : 0,
+      netRevenue:   revenue - expense,
+      avgPerDay:    r?.days ? Math.round(revenue / r.days) : 0,
     });
   }
 

@@ -1,47 +1,28 @@
 // api/health.js — GET /api/health
-// 健檢：同時確認 SimplyBook 與資料庫。不需要 API key，方便直接用瀏覽器開。
+// 健檢：確認資料庫連線與設定。不需要 API key，方便直接用瀏覽器開。
 
 import { applyCors } from "./_lib/http.js";
-import { getToken } from "./_simplybook.js";
 import { db } from "./_lib/db.js";
 
 export default async function handler(req, res) {
   applyCors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
 
-  const simplybook = await checkSimplyBook();
-  const database   = await checkDatabase();
-
-  // SimplyBook 是選配 —— 沒接也能正常結帳（場次由店員手動輸入），
-  // 所以只有資料庫掛掉才算系統不健康。
+  const database = await checkDatabase();
   const ok = database.ok;
   return res.status(ok ? 200 : 503).json({
     ok,
     server:    "bgl-escape-backend",
     timestamp: new Date().toISOString(),
     config: {
-      SB_API_KEY:        Boolean(process.env.SB_API_KEY),
-      DATABASE_URL:      Boolean(process.env.DATABASE_URL),
-      APP_API_KEY:       Boolean(process.env.APP_API_KEY),
-      SB_WEBHOOK_SECRET: Boolean(process.env.SB_WEBHOOK_SECRET),
-      ALLOWED_ORIGIN:    process.env.ALLOWED_ORIGIN || "*（未限制，建議上線後設定）",
+      DATABASE_URL:   Boolean(process.env.DATABASE_URL),
+      APP_API_KEY:    Boolean(process.env.APP_API_KEY),
+      ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN || "*（未限制，建議上線後設定）",
     },
-    simplybook,
     database,
   });
 }
 
-async function checkSimplyBook() {
-  if (!process.env.SB_API_KEY) {
-    return { ok: false, optional: true, message: "未接 SimplyBook（選配）—— 場次由店員在結帳頁面輸入" };
-  }
-  try {
-    await getToken(process.env.SB_API_KEY);
-    return { ok: true, message: "SimplyBook 連線正常 ✓" };
-  } catch (e) {
-    return { ok: false, message: `SimplyBook 連線失敗：${e.message}` };
-  }
-}
 
 async function checkDatabase() {
   if (!process.env.DATABASE_URL) return { ok: false, message: "未設定 DATABASE_URL" };

@@ -1,18 +1,11 @@
 // api/_lib/closing.js
-// 日結單的共用邏輯：金額計算、讀取、寫入
+// 日結單的核心邏輯：金額計算、把關規則、讀寫。
+//
+// 對應紙本表單的核心等式：
+//     收入小計 － 折扣 ＝ 收款合計
+// 兩邊對不起來就是帳有問題，這是整套系統唯一要守住的事。
 
 import { fail } from "./http.js";
-
-export const PAYMENT_METHODS = [
-  { key: "cash",        label: "現金",       affectsDrawer: true  },
-  { key: "credit_card", label: "信用卡",     affectsDrawer: false },
-  { key: "linepay",     label: "LINE Pay",   affectsDrawer: false },
-  { key: "jkopay",      label: "街口支付",   affectsDrawer: false },
-  { key: "twpay",       label: "台灣 Pay",   affectsDrawer: false },
-  { key: "transfer",    label: "銀行轉帳",   affectsDrawer: false },
-  { key: "prepaid",     label: "線上預付/訂金", affectsDrawer: false },
-  { key: "other",       label: "其他",       affectsDrawer: false },
-];
 
 export const EXPENSE_CATEGORIES = [
   { key: "supplies",  label: "耗材/道具" },
@@ -26,26 +19,18 @@ export const EXPENSE_CATEGORIES = [
 /** 台幣現行流通面額，由大到小 */
 export const DENOMINATIONS = [1000, 500, 100, 50, 10, 5, 1];
 
-const PAYMENT_KEYS = new Set(PAYMENT_METHODS.map((m) => m.key));
-const DRAWER_KEYS  = new Set(PAYMENT_METHODS.filter((m) => m.affectsDrawer).map((m) => m.key));
-
 /**
  * 取得台北時區的營業日。
  * 打烊常拖到凌晨，所以往前推 6 小時 —— 凌晨 2 點結的帳算前一天的營業日。
- * @param {Date} [now]
  */
 export function defaultBusinessDate(now = new Date()) {
-  const shifted = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-  return toTaipeiDate(shifted);
+  return toTaipeiDate(new Date(now.getTime() - 6 * 60 * 60 * 1000));
 }
 
 /** Date → 台北時區的 YYYY-MM-DD */
 export function toTaipeiDate(d = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Taipei",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+    timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit",
   }).format(d);
 }
 
@@ -84,86 +69,73 @@ function intOf(value, field) {
  * 這是唯一計算帳務的地方 —— 前端顯示的數字僅供參考，一律以此為準。
  */
 export function normalizeClosing(input) {
-  const bookings = (input.bookings || []).map((b, i) => ({
-    booking_id:     b.bookingId ? String(b.bookingId) : null,
-    room_code:      b.roomCode ?? null,
-    room_name:      b.roomName ?? null,
-    service_id:     b.serviceId != null ? Number(b.serviceId) : null,
-    start_time:     b.time ?? null,
-    client_name:    b.clientName ?? null,
-    headcount:      intOf(b.headcount, `場次 #${i + 1} 人數`),
-    amount:         money(b.amount, `場次 #${i + 1} 金額`),
-    prepaid_amount: money(b.prepaidAmount, `場次 #${i + 1} 預收金額`),
-    attended:       b.attended !== false,
-    note:           b.note ?? null,
-  }));
+  const revenues = (input.revenues || [])
+    .map((r, i) => ({
+      item_id:   Number.isInteger(Number(r.itemId)) ? Number(r.itemId) : null,
+      item_name: String(r.itemName ?? "").trim() || `項目 ${i + 1}`,
+      amount:    money(r.amount, `${r.itemName || `收入項目 #${i + 1}`} 金額`),
+    }))
+    .filter((r) => r.amount > 0);
 
   const payments = (input.payments || [])
-    .map((p, i) => {
-      if (!PAYMENT_KEYS.has(p.method)) throw fail(400, `未知的收款方式：${p.method}`);
-      return {
-        method: p.method,
-        amount: money(p.amount, `收款 #${i + 1} 金額`),
-        ref_no: p.refNo ?? null,
-        note:   p.note ?? null,
-      };
-    })
+    .map((p, i) => ({
+      method_id:   Number.isInteger(Number(p.methodId)) ? Number(p.methodId) : null,
+      method_name: String(p.methodName ?? "").trim() || `收款 ${i + 1}`,
+      is_cash:     p.isCash === true,
+      amount:      money(p.amount, `${p.methodName || `收款 #${i + 1}`} 金額`),
+      ref_no:      p.refNo ?? null,
+      note:        p.note ?? null,
+    }))
     .filter((p) => p.amount > 0 || p.ref_no || p.note);
 
   const expenses = (input.expenses || [])
     .map((e, i) => ({
       category: e.category || "other",
-      amount:   money(e.amount, `雜支 #${i + 1} 金額`),
-      paid_by:  e.paidBy === "cash" ? "cash" : (e.paidBy || "cash"),
+      amount:   money(e.amount, `支出 #${i + 1} 金額`),
+      paid_by:  e.paidBy === "card" ? "card" : "cash",
       note:     e.note ?? null,
     }))
     .filter((e) => e.amount > 0);
 
-  const cashCounts = DENOMINATIONS.map((d) => ({
-    denomination: d,
-    qty: intOf(input.cashCounts?.[d], `${d} 元張數`),
-  })).filter((c) => c.qty > 0);
+  const cashCounts = DENOMINATIONS
+    .map((d) => ({ denomination: d, qty: intOf(input.cashCounts?.[d], `${d} 元張數`) }))
+    .filter((c) => c.qty > 0);
 
-  const openingFloat = money(input.openingFloat, "開店零用金");
+  const openingFloat  = money(input.openingFloat, "開店零用金");
+  const discountTotal = money(input.discountTotal, "折扣");
 
   // ---- 衍生金額 ----
-  const attended = bookings.filter((b) => b.attended);
-
-  const expectedRevenue = attended.reduce((s, b) => s + b.amount, 0);
+  const expectedRevenue = revenues.reduce((s, r) => s + r.amount, 0);
   const actualTotal     = payments.reduce((s, p) => s + p.amount, 0);
   const expenseTotal    = expenses.reduce((s, e) => s + e.amount, 0);
 
-  const cashPayments = payments
-    .filter((p) => DRAWER_KEYS.has(p.method))
-    .reduce((s, p) => s + p.amount, 0);
-  const cashExpenses = expenses
-    .filter((e) => e.paid_by === "cash")
-    .reduce((s, e) => s + e.amount, 0);
+  // 核心等式：收入小計 － 折扣 ＝ 收款合計
+  const netExpected = expectedRevenue - discountTotal;
 
+  const cashPayments = payments.filter((p) => p.is_cash).reduce((s, p) => s + p.amount, 0);
+  const cashExpenses = expenses.filter((e) => e.paid_by === "cash").reduce((s, e) => s + e.amount, 0);
   const expectedCash = openingFloat + cashPayments - cashExpenses;
 
   // 有點鈔明細就以明細為準，否則採用直接輸入的總額
   const countedFromDenoms = cashCounts.reduce((s, c) => s + c.denomination * c.qty, 0);
-  const cashCounted = cashCounts.length > 0
-    ? countedFromDenoms
-    : money(input.cashCounted, "點鈔金額");
+  const cashCounted = cashCounts.length > 0 ? countedFromDenoms : money(input.cashCounted, "點鈔金額");
 
   return {
-    bookings,
-    payments,
-    expenses,
-    cashCounts,
+    revenues, payments, expenses, cashCounts,
     totals: {
       expected_revenue: expectedRevenue,
+      discount_total:   discountTotal,
+      net_expected:     netExpected,
       actual_total:     actualTotal,
-      variance:         actualTotal - expectedRevenue,
+      variance:         actualTotal - netExpected,
       opening_float:    openingFloat,
       expected_cash:    expectedCash,
       cash_counted:     cashCounted,
       cash_variance:    cashCounted - expectedCash,
       expense_total:    expenseTotal,
-      headcount_total:  attended.reduce((s, b) => s + b.headcount, 0),
-      session_count:    attended.length,
+      // 保留欄位讓資料表結構不變；本階段不記錄人次與場次
+      headcount_total:  0,
+      session_count:    revenues.length,
     },
     variance_reason: input.varianceReason || null,
     notes:           input.notes || null,
@@ -173,8 +145,7 @@ export function normalizeClosing(input) {
 }
 
 /**
- * 送出前的把關。回傳的每一項都會擋下結帳，除非店員填了差額原因並確認送出。
- * 純函式，方便測試。
+ * 送出前的把關。回傳的每一項都會擋下結帳，除非填了差額原因並確認送出。
  * @param {ReturnType<typeof normalizeClosing>} data
  * @param {number} tolerance 允許誤差（元）
  */
@@ -184,48 +155,45 @@ export function findBlockers(data, tolerance = 0) {
 
   if (Math.abs(t.variance) > tolerance) {
     out.push(
-      `帳款差額 ${fmt(t.variance)} 元（應收 ${fmt(t.expected_revenue)}，實收 ${fmt(t.actual_total)}）`
+      `帳款差額 ${fmt(t.variance)} 元（收入 ${fmt(t.expected_revenue)} － 折扣 ${fmt(t.discount_total)} ＝ ${fmt(t.net_expected)}，收款合計 ${fmt(t.actual_total)}）`
     );
   }
 
-  if (Math.abs(t.cash_variance) > tolerance) {
+  if (t.cash_counted > 0 && Math.abs(t.cash_variance) > tolerance) {
     out.push(
       `現金差額 ${fmt(t.cash_variance)} 元（櫃內應有 ${fmt(t.expected_cash)}，實際點鈔 ${fmt(t.cash_counted)}）`
     );
-  }
-
-  // 收了現金卻沒點鈔，會被當成 0 元硬算出一個假的差額 —— 先擋下來要求點鈔
-  const cashTaken = data.payments
-    .filter((p) => DRAWER_KEYS.has(p.method))
-    .reduce((s, p) => s + p.amount, 0);
-  if (cashTaken > 0 && t.cash_counted === 0) {
-    out.push(`有現金收款 ${fmt(cashTaken)} 元但尚未點鈔，請先清點錢櫃`);
   }
 
   return out;
 }
 
 /**
- * 提醒事項：不擋結帳，只是提示店員再看一眼。
- * @param {ReturnType<typeof normalizeClosing>} data
+ * 提醒事項：不擋結帳，只是提示再看一眼。
  * @param {{ avgSameWeekday?: number }} context
  */
 export function findWarnings(data, context = {}) {
+  const t = data.totals;
   const out = [];
 
-  for (const b of data.bookings) {
-    if (!b.attended) continue;
-    if (b.headcount > 0 && b.amount === 0) {
-      out.push(`${b.room_name || b.room_code || "某場次"} ${b.start_time || ""} 有 ${b.headcount} 人但金額是 0`);
+  const cashTaken = data.payments.filter((p) => p.is_cash).reduce((s, p) => s + p.amount, 0);
+  if (cashTaken > 0 && t.cash_counted === 0) {
+    out.push(`今日有現金收款 ${fmt(cashTaken)} 元，但沒有點鈔`);
+  }
+
+  if (t.discount_total > 0 && t.expected_revenue > 0) {
+    const ratio = t.discount_total / t.expected_revenue;
+    if (ratio >= 0.2) {
+      out.push(`折扣 ${fmt(t.discount_total)} 元佔收入 ${Math.round(ratio * 100)}%，比例偏高`);
     }
   }
 
   const avg = context.avgSameWeekday;
-  if (avg > 0 && data.totals.expected_revenue > 0) {
-    const diff = (data.totals.expected_revenue - avg) / avg;
+  if (avg > 0 && t.net_expected > 0) {
+    const diff = (t.net_expected - avg) / avg;
     if (Math.abs(diff) >= 0.4) {
       out.push(
-        `今日營收 ${fmt(data.totals.expected_revenue)} 元，與近期同星期平均 ${fmt(Math.round(avg))} 元相差 ${Math.round(diff * 100)}%`
+        `今日收入 ${fmt(t.net_expected)} 元，與近期同星期平均 ${fmt(Math.round(avg))} 元相差 ${Math.round(diff * 100)}%`
       );
     }
   }
@@ -237,43 +205,41 @@ function fmt(n) {
   return n.toLocaleString("zh-TW");
 }
 
-/** DB 欄位 → API 欄位 */
-export function toApiBooking(b) {
-  return {
-    bookingId:     b.booking_id,
-    serviceId:     b.service_id,
-    roomCode:      b.room_code,
-    roomName:      b.room_name,
-    time:          b.start_time,
-    clientName:    b.client_name,
-    headcount:     b.headcount,
-    amount:        b.amount,
-    prepaidAmount: b.prepaid_amount,
-    attended:      b.attended,
-    note:          b.note,
-  };
+/** pg 回傳的 DATE 可能是 Date 物件，統一成 YYYY-MM-DD 字串 */
+export function dateStr(value) {
+  if (!value) return null;
+  if (typeof value === "string") return value.slice(0, 10);
+  return toTaipeiDate(value);
 }
 
 /** loadClosing() 的結果 → 給前端的 JSON */
-export function serializeClosing({ closing, payments, expenses, cashCounts, bookings }) {
+export function serializeClosing({ closing, payments, expenses, cashCounts, revenues }) {
   return {
     id:             closing.id,
     status:         closing.status,
     storeCode:      closing.store_code,
     businessDate:   dateStr(closing.business_date),
     openingFloat:   closing.opening_float,
+    discountTotal:  closing.discount_total,
     cashCounted:    closing.cash_counted,
     varianceReason: closing.variance_reason,
     notes:          closing.notes,
     staffId:        closing.staff_id,
     submittedBy:    closing.submitted_by,
     submittedAt:    closing.submitted_at,
-    bookings:       bookings.map(toApiBooking),
-    payments:       payments.map((p) => ({ method: p.method, amount: p.amount, refNo: p.ref_no, note: p.note })),
-    expenses:       expenses.map((e) => ({ category: e.category, amount: e.amount, paidBy: e.paid_by, note: e.note })),
-    cashCounts:     Object.fromEntries(cashCounts.map((c) => [c.denomination, c.qty])),
+    revenues: revenues.map((r) => ({ itemId: r.item_id, itemName: r.item_name, amount: r.amount })),
+    payments: payments.map((p) => ({
+      methodId: p.method_id, methodName: p.method_name, isCash: p.is_cash,
+      amount: p.amount, refNo: p.ref_no, note: p.note,
+    })),
+    expenses: expenses.map((e) => ({
+      category: e.category, amount: e.amount, paidBy: e.paid_by, note: e.note,
+    })),
+    cashCounts: Object.fromEntries(cashCounts.map((c) => [c.denomination, c.qty])),
     totals: {
       expected_revenue: closing.expected_revenue,
+      discount_total:   closing.discount_total,
+      net_expected:     closing.expected_revenue - closing.discount_total,
       actual_total:     closing.actual_total,
       variance:         closing.variance,
       opening_float:    closing.opening_float,
@@ -281,17 +247,8 @@ export function serializeClosing({ closing, payments, expenses, cashCounts, book
       cash_counted:     closing.cash_counted,
       cash_variance:    closing.cash_variance,
       expense_total:    closing.expense_total,
-      headcount_total:  closing.headcount_total,
-      session_count:    closing.session_count,
     },
   };
-}
-
-/** pg 回傳的 DATE 可能是 Date 物件，統一成 YYYY-MM-DD 字串 */
-export function dateStr(value) {
-  if (!value) return null;
-  if (typeof value === "string") return value.slice(0, 10);
-  return toTaipeiDate(value);
 }
 
 /** 讀取單張日結單（含所有明細）；找不到回傳 null */
@@ -302,18 +259,18 @@ export async function loadClosing(sql, storeCode, businessDate) {
   `;
   if (!closing) return null;
 
-  const [payments, expenses, cashCounts, bookings] = await Promise.all([
-    sql`SELECT * FROM payment_lines    WHERE closing_id = ${closing.id} ORDER BY id`,
-    sql`SELECT * FROM expense_lines    WHERE closing_id = ${closing.id} ORDER BY id`,
-    sql`SELECT * FROM cash_counts      WHERE closing_id = ${closing.id} ORDER BY denomination DESC`,
-    sql`SELECT * FROM closing_bookings WHERE closing_id = ${closing.id} ORDER BY start_time, room_code`,
+  const [payments, expenses, cashCounts, revenues] = await Promise.all([
+    sql`SELECT * FROM payment_lines         WHERE closing_id = ${closing.id} ORDER BY id`,
+    sql`SELECT * FROM expense_lines         WHERE closing_id = ${closing.id} ORDER BY id`,
+    sql`SELECT * FROM cash_counts           WHERE closing_id = ${closing.id} ORDER BY denomination DESC`,
+    sql`SELECT * FROM closing_revenue_lines WHERE closing_id = ${closing.id} ORDER BY id`,
   ]);
 
-  return { closing, payments, expenses, cashCounts, bookings };
+  return { closing, payments, expenses, cashCounts, revenues };
 }
 
 /**
- * 寫入日結單（新增或覆蓋 draft）。已鎖定的單子會被拒絕。
+ * 寫入日結單（新增或覆蓋草稿）。已鎖定的單子會被拒絕。
  * 整段包在 transaction 裡，避免主檔寫進去但明細失敗。
  */
 export async function saveClosing(sql, { storeCode, businessDate, data, status, actor }) {
@@ -334,6 +291,7 @@ export async function saveClosing(sql, { storeCode, businessDate, data, status, 
       business_date:    businessDate,
       status,
       expected_revenue: t.expected_revenue,
+      discount_total:   t.discount_total,
       actual_total:     t.actual_total,
       variance:         t.variance,
       opening_float:    t.opening_float,
@@ -355,22 +313,20 @@ export async function saveClosing(sql, { storeCode, businessDate, data, status, 
     if (existing) {
       closingId = existing.id;
       await tx`UPDATE daily_closings SET ${tx(row)} WHERE id = ${closingId}`;
-      await tx`DELETE FROM payment_lines    WHERE closing_id = ${closingId}`;
-      await tx`DELETE FROM expense_lines    WHERE closing_id = ${closingId}`;
-      await tx`DELETE FROM cash_counts      WHERE closing_id = ${closingId}`;
-      await tx`DELETE FROM closing_bookings WHERE closing_id = ${closingId}`;
+      await tx`DELETE FROM payment_lines         WHERE closing_id = ${closingId}`;
+      await tx`DELETE FROM expense_lines         WHERE closing_id = ${closingId}`;
+      await tx`DELETE FROM cash_counts           WHERE closing_id = ${closingId}`;
+      await tx`DELETE FROM closing_revenue_lines WHERE closing_id = ${closingId}`;
     } else {
-      const [created] = await tx`
-        INSERT INTO daily_closings ${tx(row)} RETURNING id
-      `;
+      const [created] = await tx`INSERT INTO daily_closings ${tx(row)} RETURNING id`;
       closingId = created.id;
     }
 
     const withId = (rows) => rows.map((r) => ({ ...r, closing_id: closingId }));
-    if (data.payments.length)   await tx`INSERT INTO payment_lines    ${tx(withId(data.payments))}`;
-    if (data.expenses.length)   await tx`INSERT INTO expense_lines    ${tx(withId(data.expenses))}`;
-    if (data.cashCounts.length) await tx`INSERT INTO cash_counts      ${tx(withId(data.cashCounts))}`;
-    if (data.bookings.length)   await tx`INSERT INTO closing_bookings ${tx(withId(data.bookings))}`;
+    if (data.payments.length)   await tx`INSERT INTO payment_lines         ${tx(withId(data.payments))}`;
+    if (data.expenses.length)   await tx`INSERT INTO expense_lines         ${tx(withId(data.expenses))}`;
+    if (data.cashCounts.length) await tx`INSERT INTO cash_counts           ${tx(withId(data.cashCounts))}`;
+    if (data.revenues.length)   await tx`INSERT INTO closing_revenue_lines ${tx(withId(data.revenues))}`;
 
     await tx`
       INSERT INTO closing_audit_log (closing_id, action, actor, detail)

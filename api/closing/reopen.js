@@ -4,7 +4,7 @@
 import { db } from "../_lib/db.js";
 import { handler, readBody, fail } from "../_lib/http.js";
 import { assertDate } from "../_lib/closing.js";
-import { DEFAULT_STORE } from "../_simplybook.js";
+import { DEFAULT_STORE } from "../_lib/store.js";
 
 export default handler(
   async (req, res) => {

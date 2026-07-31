@@ -9,28 +9,28 @@
     --purple:#552583; --purple-dk:#3C1A5E; --purple-lt:#7B4BA8; --purple-pale:#F1ECF7;
     --gold:#FDB927;   --gold-dk:#C98A0B;   --gold-pale:#FFF6E0;
     --bg:#F5F4F8; --card:#FFFFFF; --line:#E2DEEA; --ink:#1E1728; --dim:#6B6478;
-    --ok:#0F7B3E; --ok-bg:#E8F5ED; --bad:#C62828; --bad-bg:#FDECEC; --warn-bg:#FFF6E0;
+    --ok:#0F7B3E; --ok-bg:#E8F5ED; --bad:#C62828; --bad-bg:#FDECEC;
     --shadow:0 1px 2px rgba(30,23,40,.06), 0 4px 12px rgba(30,23,40,.05);
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
   body{margin:0;background:var(--bg);color:var(--ink);
-       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
-       padding-bottom:104px}
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+       padding-bottom:108px}
 
   /* ---------- 頁首 ---------- */
   header{position:sticky;top:0;z-index:30;background:var(--purple);color:#fff;
          border-bottom:3px solid var(--gold);box-shadow:var(--shadow)}
-  .hwrap{max-width:1180px;margin:0 auto;padding:11px 20px;
+  .hwrap{max-width:1120px;margin:0 auto;padding:11px 20px;
          display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .brand{font-size:17px;font-weight:700;letter-spacing:.6px;white-space:nowrap}
   .brand em{color:var(--gold);font-style:normal}
-  .hspace{flex:1}
   .hfield{display:flex;align-items:center;gap:7px;font-size:13px}
-  .hfield label{color:#D9CEE8;white-space:nowrap}
+  .hfield label{color:#D9CEE8;white-space:nowrap;margin:0}
   header select{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.3);
-                border-radius:7px;padding:6px 9px;font:inherit;font-size:14px}
+                border-radius:7px;padding:6px 9px;font:inherit;font-size:14px;width:auto}
   header select option{color:#1E1728}
+  .hspace{flex:1}
   .pill{background:var(--gold);color:#3C1A5E;border-radius:20px;padding:3px 11px;
         font-size:12px;font-weight:700;white-space:nowrap}
   .pill.grey{background:rgba(255,255,255,.18);color:#fff}
@@ -38,31 +38,30 @@
            border-radius:7px;width:30px;height:30px;font-size:17px;line-height:1;cursor:pointer;padding:0}
   .iconbtn:hover{background:rgba(255,255,255,.25)}
 
-  /* ---------- 版面 ---------- */
-  main{max-width:1180px;margin:0 auto;padding:18px 20px}
+  /* ---------- 版面：左收入 右收款，跟紙本一樣 ---------- */
+  main{max-width:1120px;margin:0 auto;padding:18px 20px}
   .cols{display:grid;grid-template-columns:1fr;gap:16px}
-  @media(min-width:960px){ .cols{grid-template-columns:1.15fr .85fr;align-items:start} }
+  @media(min-width:900px){ .cols{grid-template-columns:1fr 1fr;align-items:start} }
 
   section{background:var(--card);border:1px solid var(--line);border-radius:12px;
           padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
-  section > h2{margin:0 0 14px;font-size:13px;font-weight:700;color:var(--purple);
-               letter-spacing:1.4px;text-transform:uppercase;
-               display:flex;align-items:center;gap:9px}
+  section > h2{margin:0 0 12px;font-size:13px;font-weight:700;color:var(--purple);
+               letter-spacing:1.4px;display:flex;align-items:center;gap:9px}
   section > h2::after{content:"";flex:1;height:2px;background:var(--purple-pale);border-radius:2px}
 
   label{display:block;font-size:12px;color:var(--dim);margin-bottom:4px;font-weight:500}
   input,select,textarea{width:100%;background:#fff;color:var(--ink);border:1.5px solid var(--line);
         border-radius:8px;padding:9px 11px;font:inherit;transition:border-color .12s}
   input:hover,select:hover{border-color:#C9C2D6}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--purple);
+  input:focus,select:focus{outline:none;border-color:var(--purple);
         box-shadow:0 0 0 3px rgba(85,37,131,.13)}
-  input[type=number]{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-  input:disabled,select:disabled,textarea:disabled{background:#F4F3F6;color:#9A93A6;cursor:not-allowed}
+  input[type=number]{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:16px}
+  input:disabled,select:disabled{background:#F4F3F6;color:#9A93A6;cursor:not-allowed}
   .row{display:flex;gap:10px;flex-wrap:wrap}
   .row > *{flex:1;min-width:0}
 
   button{background:var(--purple);color:#fff;border:0;border-radius:8px;padding:11px 18px;
-         font:600 15px/1 inherit;cursor:pointer;transition:background .12s;white-space:nowrap}
+         font:600 15px/1 inherit;cursor:pointer;white-space:nowrap;transition:background .12s}
   button:hover{background:var(--purple-dk)}
   button.ghost{background:#fff;color:var(--purple);border:1.5px solid var(--line)}
   button.ghost:hover{background:var(--purple-pale);border-color:var(--purple-lt)}
@@ -71,70 +70,65 @@
   button:disabled{opacity:.45;cursor:not-allowed}
   button.tiny{padding:7px 11px;font-size:13px}
 
-  /* ---------- 場次 ---------- */
-  .sess{border:1.5px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;
-        padding:12px 14px;margin-bottom:10px;background:#FCFBFD}
-  .sess.skip{opacity:.5;border-left-color:#C9C2D6}
-  .sess-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-  .tag{background:var(--purple);color:#fff;border-radius:6px;padding:3px 9px;
-       font-weight:700;font-size:13px;min-width:28px;text-align:center}
-  .sess-head .rm{font-weight:600}
-  .sess-head .who{color:var(--dim);font-size:13px;margin-left:auto;
-       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40%}
-  .chk{display:flex;gap:7px;align-items:center;margin-top:9px;color:var(--dim);font-size:13px;cursor:pointer}
-  .chk input{width:auto;margin:0}
+  /* 表格式輸入列：名稱 + 金額，跟紙本一樣一行一項 */
+  .r{display:grid;grid-template-columns:1fr 148px;gap:10px;align-items:center;
+     padding:5px 0;border-bottom:1px solid #F0EDF5}
+  .r:last-of-type{border-bottom:0}
+  .r > .nm{font-size:15px;font-weight:500}
+  .r.cash > .nm::after{content:"　現金";font-size:11px;color:var(--gold-dk);font-weight:600}
+  .r3{grid-template-columns:1fr 148px 34px}
 
-  /* ---------- 收款 / 雜支 / 點鈔 ---------- */
-  .pay{display:grid;grid-template-columns:104px 1fr 1fr;gap:9px;align-items:center;margin-bottom:9px}
-  .pay > .nm{font-size:14px;color:var(--ink);font-weight:500}
-  .cash{display:grid;grid-template-columns:62px 1fr 96px;gap:9px;align-items:center;margin-bottom:7px}
-  .cash > .den{font-size:14px;color:var(--dim);text-align:right;font-weight:600}
-  .cash > .sub{font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:var(--dim)}
+  .sum{display:flex;justify-content:space-between;align-items:baseline;
+       margin:10px -18px -16px;padding:12px 18px;border-radius:0 0 8px 8px;
+       background:var(--purple-pale);font-variant-numeric:tabular-nums}
+  .sum span{color:var(--purple);font-weight:600;font-size:14px}
+  .sum b{font-size:21px;color:var(--purple-dk)}
+  .mini{display:flex;justify-content:space-between;padding:7px 0;font-size:14px;
+        font-variant-numeric:tabular-nums;border-bottom:1px dashed var(--line)}
+  .mini:last-child{border-bottom:0}
+  .mini span{color:var(--dim)}
+  .mini b{font-weight:700}
 
-  .line{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;
-        border-bottom:1px dashed var(--line);font-variant-numeric:tabular-nums}
-  .line:last-child{border-bottom:0}
-  .line span{color:var(--dim);font-size:14px}
-  .line b{font-size:17px;font-weight:700}
-  .line.hi{background:var(--purple-pale);margin:6px -18px 0;padding:10px 18px;border-bottom:0;border-radius:0 0 8px 8px}
-  .line.hi span{color:var(--purple);font-weight:600}
+  .cash-grid{display:grid;grid-template-columns:58px 1fr 92px;gap:8px;align-items:center;margin-bottom:6px}
+  .cash-grid > .den{font-size:14px;color:var(--dim);text-align:right;font-weight:600}
+  .cash-grid > .sub{font-size:13px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
 
   .ok{color:var(--ok)} .bad{color:var(--bad)} .dim{color:var(--dim)}
-  .hint{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5}
+  .hint{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.55}
 
   /* ---------- 底部總結列 ---------- */
   .bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;
        border-top:3px solid var(--gold);box-shadow:0 -3px 16px rgba(30,23,40,.1);
-       padding:11px 20px calc(11px + env(safe-area-inset-bottom))}
-  .bwrap{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  .stat{display:flex;flex-direction:column;min-width:88px}
-  .stat .k{font-size:11px;color:var(--dim);letter-spacing:.5px}
-  .stat .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+       padding:10px 20px calc(10px + env(safe-area-inset-bottom))}
+  .bwrap{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+  .stat{display:flex;flex-direction:column;min-width:84px}
+  .stat .k{font-size:11px;color:var(--dim);letter-spacing:.4px}
+  .stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
   .stat.big .v{font-size:26px}
+  .op{font-size:19px;color:var(--dim);font-weight:300;align-self:center;padding-top:12px}
   .bsep{width:1px;height:34px;background:var(--line)}
   .bar button{padding:13px 26px;font-size:16px}
-  @media(max-width:560px){
-    .stat .v{font-size:18px} .stat.big .v{font-size:21px}
-    .stat{min-width:66px} .bar button{flex:1;width:100%}
+  @media(max-width:640px){
+    .stat .v{font-size:17px} .stat.big .v{font-size:20px}
+    .stat{min-width:62px} .op{font-size:15px;padding-top:11px}
+    .bar button{flex:1;width:100%}
   }
 
   /* ---------- 提示 ---------- */
   .note{border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:14px;line-height:1.6}
-  .note.warn{background:var(--warn-bg);border:1.5px solid var(--gold)}
+  .note.warn{background:var(--gold-pale);border:1.5px solid var(--gold)}
   .note.lock{background:var(--purple-pale);border:1.5px solid var(--purple-lt);color:var(--purple-dk)}
   .note b{display:block;margin-bottom:2px}
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;z-index:50;
-         max-width:min(560px,92vw);padding:13px 17px;border-radius:10px;font-size:14px;
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:112px;z-index:50;
+         max-width:min(600px,92vw);padding:13px 17px;border-radius:10px;font-size:14px;
          white-space:pre-line;display:none;box-shadow:0 6px 24px rgba(30,23,40,.22);line-height:1.6}
   .toast.show{display:block}
   .toast.e{background:var(--bad-bg);border:1.5px solid var(--bad);color:#7F1D1D}
   .toast.s{background:var(--ok-bg);border:1.5px solid var(--ok);color:#14532D}
 
-  /* ---------- 設定（只在沒金鑰時出現） ---------- */
-  #setup{max-width:440px;margin:56px auto}
+  #setup{max-width:430px;margin:56px auto}
   #setup h2::after{display:none}
   .center{text-align:center}
-  .lock-ico{font-size:34px;display:block;margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -142,12 +136,9 @@
 <header>
   <div class="hwrap">
     <div class="brand">勃根地密室 <em>／</em> 打烊結帳</div>
+    <div class="hfield"><label for="date">日期</label><select id="date"></select></div>
     <div class="hfield">
-      <label for="date">營業日</label>
-      <select id="date"></select>
-    </div>
-    <div class="hfield">
-      <label for="staff">結帳人員</label>
+      <label for="staff">經手人</label>
       <select id="staff"><option value="">請選擇</option></select>
       <button class="iconbtn" id="addStaffBtn" title="新增人員">＋</button>
     </div>
@@ -156,14 +147,10 @@
   </div>
 </header>
 
-<!-- 首次設定：輸入一次之後永遠不再出現 -->
 <section id="setup" style="display:none">
   <h2>首次設定</h2>
-  <div class="center" style="margin-bottom:14px">
-    <span class="lock-ico">🔑</span>
-    <div class="hint" style="margin-top:0">
-      這台電腦只需要設定這一次，之後打開就直接進入結帳畫面。
-    </div>
+  <div class="center hint" style="margin:0 0 14px">
+    這台電腦只需要設定一次，之後打開就直接進入結帳畫面。
   </div>
   <label for="apikey">店內密碼</label>
   <input type="password" id="apikey" placeholder="向老闆索取" autocomplete="off">
@@ -174,39 +161,50 @@
   <div id="notes"></div>
 
   <div class="cols">
+    <!-- ============ 左：收入 ============ -->
     <div>
       <section>
-        <h2>當日場次</h2>
-        <div id="sessions"></div>
-        <button class="ghost" style="width:100%;margin-top:6px" onclick="addSession()">＋ 新增場次</button>
-        <div class="line hi"><span>應收合計</span><b id="expected">0</b></div>
+        <h2>收入</h2>
+        <div id="revenues"></div>
+        <div class="sum"><span>小計</span><b id="gross">0</b></div>
       </section>
 
       <section>
-        <h2>雜支</h2>
+        <h2>折扣</h2>
+        <div class="r"><span class="nm">折扣金額</span>
+          <input type="number" min="0" step="1" id="discount" placeholder="0"></div>
+        <div class="sum"><span>應收（小計 － 折扣）</span><b id="net">0</b></div>
+      </section>
+
+      <section>
+        <h2>支出</h2>
         <div id="expenses"></div>
-        <button class="ghost tiny" style="width:100%;margin-top:4px" onclick="addExpense()">＋ 新增雜支</button>
-        <div class="line" style="margin-top:8px"><span>雜支合計</span><b id="expenseTotal">0</b></div>
+        <button class="ghost tiny" style="width:100%;margin-top:6px" onclick="addExpense()">＋ 新增支出</button>
+        <div class="mini" style="margin-top:8px"><span>支出合計</span><b id="expenseTotal">0</b></div>
       </section>
     </div>
 
+    <!-- ============ 右：收款 ============ -->
     <div>
       <section>
-        <h2>實收金額</h2>
+        <h2>收款方式</h2>
         <div id="payments"></div>
-        <div class="line hi"><span>實收合計</span><b id="actual">0</b></div>
+        <div class="sum"><span>總計</span><b id="actual">0</b></div>
       </section>
 
       <section>
-        <h2>現金點鈔</h2>
-        <label for="openingFloat">開店零用金</label>
-        <input type="number" id="openingFloat" value="0" step="1" min="0">
-        <div style="height:12px"></div>
-        <div id="cash"></div>
-        <div class="line"><span>點鈔合計</span><b id="counted">0</b></div>
-        <div class="line"><span>櫃內應有</span><b id="expectedCash">0</b></div>
-        <div class="line hi"><span>現金差額</span><b id="cashVar">0</b></div>
-        <div class="hint">櫃內應有 ＝ 零用金 ＋ 現金收款 － 以現金支付的雜支</div>
+        <h2>現金點鈔<span style="font-size:11px;color:var(--dim);letter-spacing:0;font-weight:400">（選填）</span></h2>
+        <button class="ghost tiny" id="cashToggle" style="width:100%" onclick="toggleCash()">展開點鈔</button>
+        <div id="cashBox" style="display:none;margin-top:12px">
+          <label for="openingFloat">開店零用金</label>
+          <input type="number" id="openingFloat" value="0" step="1" min="0">
+          <div style="height:12px"></div>
+          <div id="cash"></div>
+          <div class="mini"><span>點鈔合計</span><b id="counted">0</b></div>
+          <div class="mini"><span>櫃內應有</span><b id="expectedCash">0</b></div>
+          <div class="mini"><span>現金差額</span><b id="cashVar" class="ok">0</b></div>
+          <div class="hint">櫃內應有 ＝ 零用金 ＋ 現金收款 － 以現金支付的支出</div>
+        </div>
       </section>
     </div>
   </div>
@@ -219,8 +217,9 @@
       <div><label for="notes2">備註</label>
         <input id="notes2" placeholder="公休、特殊狀況…"></div>
     </div>
-    <label class="chk" id="forceWrap" style="margin-top:12px;color:var(--bad);font-weight:600">
-      <input type="checkbox" id="force"> 帳款有差額，我已確認並仍要送出
+    <label id="forceWrap" style="display:none;align-items:center;gap:8px;margin-top:12px;
+           color:var(--bad);font-weight:600;font-size:14px;cursor:pointer">
+      <input type="checkbox" id="force" style="width:auto"> 帳款有差額，我已確認並仍要送出
     </label>
     <div class="row" style="margin-top:14px">
       <button class="ghost" onclick="save()">暫存草稿</button>
@@ -228,19 +227,23 @@
     </div>
   </section>
 
-  <div class="center" style="padding:4px 0 20px">
+  <div class="center" style="padding:0 0 20px">
     <button class="ghost tiny" onclick="forgetKey()">清除本機設定</button>
   </div>
 </main>
 
 <div class="bar" id="bar" style="display:none">
   <div class="bwrap">
-    <div class="stat"><span class="k">應收</span><span class="v" id="bExpected">0</span></div>
+    <div class="stat"><span class="k">收入</span><span class="v" id="bGross">0</span></div>
+    <div class="op">−</div>
+    <div class="stat"><span class="k">折扣</span><span class="v" id="bDiscount">0</span></div>
+    <div class="op">＝</div>
+    <div class="stat"><span class="k">應收</span><span class="v" id="bNet">0</span></div>
     <div class="bsep"></div>
-    <div class="stat"><span class="k">實收</span><span class="v" id="bActual">0</span></div>
+    <div class="stat"><span class="k">收款總計</span><span class="v" id="bActual">0</span></div>
     <div class="bsep"></div>
     <div class="stat big"><span class="k">差額</span><span class="v ok" id="bVar">0</span></div>
-    <div class="hspace" style="flex:1"></div>
+    <div style="flex:1"></div>
     <button class="gold" onclick="submit()">送出結帳</button>
   </div>
 </div>
@@ -249,18 +252,18 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+const KEY = 'bgl_key', STORE = 'dazhong';
 let META = null, STATE = null;
 
 const nf  = (n) => (n ?? 0).toLocaleString('zh-TW');
 const num = (v) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? n : 0; };
-const KEY = 'bgl_key', STORE = 'dazhong';
 
 function toast(msg, kind = 's') {
   const t = $('toast');
   t.textContent = msg;
   t.className = `toast show ${kind}`;
   clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('show'), kind === 'e' ? 9000 : 3800);
+  t._t = setTimeout(() => t.classList.remove('show'), kind === 'e' ? 9000 : 4000);
 }
 
 async function api(path, opts = {}) {
@@ -303,16 +306,14 @@ function forgetKey() {
 async function load() {
   try {
     const data = await api(`/api/closing/preview?date=${$('date').value}&store=${STORE}`);
-    META = data.meta;
+    META  = data.meta;
     STATE = data.closing;
     $('setup').style.display = 'none';
     $('app').style.display = 'block';
     $('bar').style.display = 'block';
     renderStaff();
     render(data);
-  } catch (e) {
-    toast('載入失敗：' + e.message, 'e');
-  }
+  } catch (e) { toast('載入失敗：' + e.message, 'e'); }
 }
 
 const statusLabel = (s) => ({ new: '尚未建立', draft: '草稿', locked: '已結帳' }[s] || s);
@@ -320,11 +321,10 @@ const statusLabel = (s) => ({ new: '尚未建立', draft: '草稿', locked: '已
 function render(data) {
   const locked = STATE.status === 'locked';
 
-  // 提示區：已結帳 / 前幾天漏結
   const notes = [];
   if (locked) {
     notes.push(`<div class="note lock"><b>此日已結帳完成</b>
-      ${new Date(STATE.submittedAt).toLocaleString('zh-TW')}　結帳人：${STATE.submittedBy || '—'}
+      ${new Date(STATE.submittedAt).toLocaleString('zh-TW')}　經手人：${STATE.submittedBy || '—'}
       　內容已鎖定，需請老闆解鎖才能修改。</div>`);
   }
   const pending = (data?.pendingClosings || []).filter((d) => d !== $('date').value);
@@ -337,18 +337,21 @@ function render(data) {
   $('statusPill').textContent = statusLabel(STATE.status);
   $('statusPill').className = 'pill' + (locked ? '' : ' grey');
 
-  renderSessions();
+  renderRevenues();
   renderPayments();
   renderExpenses();
   renderCash();
 
-  $('openingFloat').value    = STATE.openingFloat ?? 0;
-  $('varianceReason').value  = STATE.varianceReason || '';
-  $('notes2').value          = STATE.notes || '';
+  $('discount').value       = STATE.discountTotal || '';
+  $('openingFloat').value   = STATE.openingFloat ?? 0;
+  $('varianceReason').value = STATE.varianceReason || '';
+  $('notes2').value         = STATE.notes || '';
   if (STATE.staffId) $('staff').value = STATE.staffId;
 
-  document.querySelectorAll('#app input, #app select, #app textarea')
-    .forEach((el) => { el.disabled = locked; });
+  // 有點鈔資料就自動展開
+  if (Object.keys(STATE.cashCounts || {}).length) toggleCash(true);
+
+  document.querySelectorAll('#app input, #app select').forEach((el) => { el.disabled = locked; });
   $('staff').disabled = locked;
   $('submitBtn').disabled = locked;
 
@@ -360,12 +363,12 @@ function renderStaff() {
   $('staff').innerHTML = '<option value="">請選擇</option>' +
     (META.staff || []).map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
   if (cur) $('staff').value = cur;
-  const remembered = localStorage.getItem('bgl_last_staff');
-  if (!$('staff').value && remembered) $('staff').value = remembered;
+  const last = localStorage.getItem('bgl_last_staff');
+  if (!$('staff').value && last) $('staff').value = last;
 }
 
 async function addStaff() {
-  const name = prompt('新增結帳人員，請輸入姓名：');
+  const name = prompt('新增經手人，請輸入姓名：');
   if (!name || !name.trim()) return;
   try {
     const r = await api('/api/staff', {
@@ -379,122 +382,65 @@ async function addStaff() {
   } catch (e) { toast('新增失敗：' + e.message, 'e'); }
 }
 
-// ---------- 場次 ----------
-function renderSessions() {
-  const rooms = META.rooms || [];
-
-  $('sessions').innerHTML = STATE.bookings.map((b, i) => {
-    const head = b.bookingId
-      ? `<span class="tag">${b.roomCode || '?'}</span>
-         <span class="rm">${b.time || '--:--'}</span>
-         <span class="rm">${b.roomName || ''}</span>
-         <span class="who">${b.clientName || ''}</span>`
-      : `<select data-i="${i}" data-f="room" style="flex:2;min-width:130px">
-           ${rooms.map((r) => `<option value="${r.serviceId}" ${r.roomCode === b.roomCode ? 'selected' : ''}>${r.roomCode}　${r.name}</option>`).join('')}
-           <option value="" ${b.roomCode ? '' : 'selected'}>其他</option>
-         </select>
-         <input type="time" data-i="${i}" data-f="time" value="${b.time || ''}" style="flex:1;min-width:110px">
-         <button class="ghost tiny" style="flex:0 0 auto" onclick="delSession(${i})" title="刪除此場次">✕</button>`;
-
-    return `<div class="sess ${b.attended === false ? 'skip' : ''}" id="sess${i}">
-      <div class="sess-head">${head}</div>
-      <div class="row">
-        <div><label>人數</label>
-          <input type="number" min="0" step="1" value="${b.headcount ?? 0}" data-i="${i}" data-f="headcount"></div>
-        <div><label>金額</label>
-          <input type="number" min="0" step="1" value="${b.amount ?? 0}" data-i="${i}" data-f="amount"></div>
-        <div><label>其中已預收</label>
-          <input type="number" min="0" step="1" value="${b.prepaidAmount ?? 0}" data-i="${i}" data-f="prepaidAmount"></div>
-      </div>
-      <label class="chk"><input type="checkbox" data-i="${i}" data-f="attended"
-        ${b.attended === false ? '' : 'checked'}> 有到店（取消勾選代表未到、不計入應收）</label>
-    </div>`;
-  }).join('') || '<div class="dim" style="padding:8px 0">今天還沒有場次，按下方按鈕新增。若為公休，請在備註說明。</div>';
-
-  $('sessions').oninput = (e) => {
-    const { i, f } = e.target.dataset;
-    if (i === undefined) return;
-    const b = STATE.bookings[i];
-
-    if (f === 'room') {
-      const r = (META.rooms || []).find((x) => String(x.serviceId) === e.target.value);
-      Object.assign(b, r ? { serviceId: r.serviceId, roomCode: r.roomCode, roomName: r.name }
-                         : { serviceId: null, roomCode: '', roomName: '其他' });
-      autoPrice(b); renderSessions();
-    } else if (f === 'time') {
-      b.time = e.target.value;
-    } else if (f === 'attended') {
-      b.attended = e.target.checked;
-      $(`sess${i}`).classList.toggle('skip', !b.attended);
-    } else {
-      b[f] = num(e.target.value);
-      if (f === 'headcount' && !b._amountEdited) {
-        autoPrice(b);
-        const el = document.querySelector(`[data-i="${i}"][data-f="amount"]`);
-        if (el) el.value = b.amount;
-      }
-      if (f === 'amount') b._amountEdited = true;
-    }
-    recalc();
-  };
+// ---------- 收入 / 收款 ----------
+function renderRevenues() {
+  const by = Object.fromEntries((STATE.revenues || []).map((r) => [r.itemId, r.amount]));
+  $('revenues').innerHTML = META.revenueItems.map((it) => `
+    <div class="r">
+      <span class="nm">${it.name}</span>
+      <input type="number" min="0" step="1" placeholder="0" data-rv="${it.id}" value="${by[it.id] || ''}">
+    </div>`).join('') || '<div class="dim">尚未設定收入項目，請到老闆頁的設定新增。</div>';
+  $('revenues').oninput = recalc;
 }
 
-function autoPrice(b) {
-  const r = (META.rooms || []).find((x) => x.roomCode === b.roomCode);
-  if (r && r.unitPrice > 0) b.amount = r.unitPrice * (b.headcount || 0);
-}
-
-function delSession(i) { STATE.bookings.splice(i, 1); renderSessions(); recalc(); }
-
-function addSession() {
-  const first = (META.rooms || [])[0];
-  STATE.bookings.push({
-    bookingId: null, serviceId: first?.serviceId ?? null,
-    roomCode: first?.roomCode ?? '', roomName: first?.name ?? '其他',
-    time: '', clientName: '', headcount: 0, amount: 0, prepaidAmount: 0, attended: true,
-  });
-  renderSessions(); recalc();
-}
-
-// ---------- 收款 / 雜支 / 點鈔 ----------
 function renderPayments() {
-  const by = Object.fromEntries(STATE.payments.map((p) => [p.method, p]));
+  const by = Object.fromEntries((STATE.payments || []).map((p) => [p.methodId, p]));
   $('payments').innerHTML = META.paymentMethods.map((m) => `
-    <div class="pay">
-      <span class="nm">${m.label}</span>
-      <input type="number" min="0" step="1" placeholder="0" data-m="${m.key}" data-f="amount"
-             value="${by[m.key]?.amount || ''}">
-      <input placeholder="單號／備註" data-m="${m.key}" data-f="refNo" value="${by[m.key]?.refNo || ''}">
-    </div>`).join('');
+    <div class="r ${m.isCash ? 'cash' : ''}">
+      <span class="nm">${m.name}</span>
+      <input type="number" min="0" step="1" placeholder="0" data-pm="${m.id}" value="${by[m.id]?.amount || ''}">
+    </div>`).join('') || '<div class="dim">尚未設定收款方式，請到老闆頁的設定新增。</div>';
   $('payments').oninput = recalc;
 }
 
 function renderExpenses() {
-  $('expenses').innerHTML = STATE.expenses.map((e, i) => {
+  $('expenses').innerHTML = (STATE.expenses || []).map((e, i) => {
     const opts = META.expenseCategories
       .map((c) => `<option value="${c.key}" ${e.category === c.key ? 'selected' : ''}>${c.label}</option>`).join('');
-    return `<div class="pay" style="grid-template-columns:104px 1fr 1fr">
+    return `<div class="r r3" style="grid-template-columns:118px 1fr 128px 34px">
       <select data-e="${i}" data-f="category">${opts}</select>
-      <input type="number" min="0" step="1" placeholder="金額" data-e="${i}" data-f="amount" value="${e.amount || ''}">
       <input placeholder="說明" data-e="${i}" data-f="note" value="${e.note || ''}">
+      <input type="number" min="0" step="1" placeholder="金額" data-e="${i}" data-f="amount" value="${e.amount || ''}">
+      <button class="ghost tiny" onclick="delExpense(${i})" title="刪除">✕</button>
+    </div>
+    <div class="r" style="grid-template-columns:118px 1fr;border-bottom:1px solid #F0EDF5;padding-bottom:8px">
       <span></span>
-      <select data-e="${i}" data-f="paidBy" style="grid-column:span 2">
+      <select data-e="${i}" data-f="paidBy">
         <option value="cash" ${e.paidBy !== 'card' ? 'selected' : ''}>現金支付（從錢櫃扣）</option>
         <option value="card" ${e.paidBy === 'card' ? 'selected' : ''}>非現金支付</option>
       </select>
     </div>`;
-  }).join('');
+  }).join('') || '<div class="dim" style="padding:4px 0">今天沒有支出</div>';
   $('expenses').oninput = recalc;
 }
 
 function addExpense() {
+  STATE.expenses = STATE.expenses || [];
   STATE.expenses.push({ category: 'supplies', amount: 0, paidBy: 'cash', note: '' });
   renderExpenses();
+}
+function delExpense(i) { STATE.expenses.splice(i, 1); renderExpenses(); recalc(); }
+
+function toggleCash(force) {
+  const box = $('cashBox');
+  const open = force === true ? true : box.style.display === 'none';
+  box.style.display = open ? 'block' : 'none';
+  $('cashToggle').textContent = open ? '收起點鈔' : '展開點鈔';
 }
 
 function renderCash() {
   $('cash').innerHTML = META.denominations.map((d) => `
-    <div class="cash">
+    <div class="cash-grid">
       <span class="den">${nf(d)}</span>
       <input type="number" min="0" step="1" placeholder="張／枚" data-d="${d}" value="${STATE.cashCounts?.[d] || ''}">
       <span class="sub" id="cd${d}">0</span>
@@ -504,13 +450,17 @@ function renderCash() {
 
 // ---------- 收集 ＋ 試算 ----------
 function collect() {
-  const payments = [...document.querySelectorAll('#payments [data-f=amount]')].map((el) => ({
-    method: el.dataset.m,
-    amount: num(el.value),
-    refNo: document.querySelector(`#payments [data-m="${el.dataset.m}"][data-f=refNo]`)?.value || null,
-  }));
+  const revenues = [...document.querySelectorAll('#revenues [data-rv]')].map((el) => {
+    const it = META.revenueItems.find((x) => String(x.id) === el.dataset.rv);
+    return { itemId: it.id, itemName: it.name, amount: num(el.value) };
+  });
 
-  const expenses = STATE.expenses.map((_, i) => ({
+  const payments = [...document.querySelectorAll('#payments [data-pm]')].map((el) => {
+    const m = META.paymentMethods.find((x) => String(x.id) === el.dataset.pm);
+    return { methodId: m.id, methodName: m.name, isCash: m.isCash, amount: num(el.value) };
+  });
+
+  const expenses = (STATE.expenses || []).map((_, i) => ({
     category: document.querySelector(`[data-e="${i}"][data-f=category]`)?.value || 'other',
     amount:   num(document.querySelector(`[data-e="${i}"][data-f=amount]`)?.value),
     paidBy:   document.querySelector(`[data-e="${i}"][data-f=paidBy]`)?.value || 'cash',
@@ -528,8 +478,9 @@ function collect() {
 
   return {
     storeCode: STORE, businessDate: $('date').value,
-    openingFloat: num($('openingFloat').value),
-    bookings: STATE.bookings, payments, expenses, cashCounts,
+    revenues, payments, expenses, cashCounts,
+    discountTotal: num($('discount').value),
+    openingFloat:  num($('openingFloat').value),
     varianceReason: $('varianceReason').value.trim() || null,
     notes: $('notes2').value.trim() || null,
     staffId, submittedBy: staffName,
@@ -539,14 +490,13 @@ function collect() {
 
 function recalc() {
   const d = collect();
-  const drawer = new Set(META.paymentMethods.filter((m) => m.affectsDrawer).map((m) => m.key));
 
-  const attended = d.bookings.filter((b) => b.attended !== false);
-  const expected = attended.reduce((s, b) => s + num(b.amount), 0);
+  const gross    = d.revenues.reduce((s, r) => s + r.amount, 0);
+  const net      = gross - d.discountTotal;
   const actual   = d.payments.reduce((s, p) => s + p.amount, 0);
   const expTotal = d.expenses.reduce((s, e) => s + e.amount, 0);
 
-  const cashIn  = d.payments.filter((p) => drawer.has(p.method)).reduce((s, p) => s + p.amount, 0);
+  const cashIn  = d.payments.filter((p) => p.isCash).reduce((s, p) => s + p.amount, 0);
   const cashOut = d.expenses.filter((e) => e.paidBy === 'cash').reduce((s, e) => s + e.amount, 0);
   const expectedCash = d.openingFloat + cashIn - cashOut;
 
@@ -558,21 +508,25 @@ function recalc() {
     if (cell) cell.textContent = nf(den * q);
   });
 
-  const variance = actual - expected;
+  const variance = actual - net;
   const cashVar  = counted - expectedCash;
 
-  $('expected').textContent     = nf(expected);
+  $('gross').textContent        = nf(gross);
+  $('net').textContent          = nf(net);
   $('actual').textContent       = nf(actual);
   $('expenseTotal').textContent = nf(expTotal);
   $('counted').textContent      = nf(counted);
   $('expectedCash').textContent = nf(expectedCash);
-  signed($('cashVar'), cashVar);
+  signed($('cashVar'), counted === 0 ? 0 : cashVar);
 
-  $('bExpected').textContent = nf(expected);
+  $('bGross').textContent    = nf(gross);
+  $('bDiscount').textContent = nf(d.discountTotal);
+  $('bNet').textContent      = nf(net);
   $('bActual').textContent   = nf(actual);
   signed($('bVar'), variance);
 
-  $('forceWrap').style.display = (variance || cashVar) ? 'flex' : 'none';
+  const needReason = variance !== 0 || (counted > 0 && cashVar !== 0);
+  $('forceWrap').style.display = needReason ? 'flex' : 'none';
 }
 
 function signed(el, v) {
@@ -591,7 +545,7 @@ async function save() {
 }
 
 async function submit() {
-  if (!$('staff').value) return toast('請先在上方選擇結帳人員', 'e');
+  if (!$('staff').value) return toast('請先在上方選擇經手人', 'e');
   if (!confirm('確定送出結帳？送出後會鎖定，需請老闆解鎖才能修改。')) return;
   try {
     const data = await api('/api/closing/submit', { method: 'POST', body: JSON.stringify(collect()) });
@@ -605,16 +559,16 @@ async function submit() {
 
 // ---------- 啟動 ----------
 (function init() {
-  // 打烊常拖到凌晨 → 往前推 6 小時當作營業日；只開放今天與昨天
   const taipei = (d) => new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-  const base  = new Date(Date.now() - 6 * 3600 * 1000);
+  const base  = new Date(Date.now() - 6 * 3600 * 1000);   // 凌晨結帳算前一天
   const today = taipei(base);
   const yest  = taipei(new Date(base.getTime() - 86400000));
   $('date').innerHTML = `<option value="${today}">${today}（今天）</option>
                          <option value="${yest}">${yest}（昨天）</option>`;
 
   $('date').addEventListener('change', load);
+  $('discount').addEventListener('input', recalc);
   $('openingFloat').addEventListener('input', recalc);
   $('addStaffBtn').addEventListener('click', addStaff);
   $('apikey').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveKey(); });

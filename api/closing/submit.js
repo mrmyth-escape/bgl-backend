@@ -14,7 +14,7 @@ import {
   assertDate,
 } from "../_lib/closing.js";
 import { avgSameWeekday } from "../_lib/stats.js";
-import { DEFAULT_STORE } from "../_simplybook.js";
+import { DEFAULT_STORE } from "../_lib/store.js";
 
 /** 允許的誤差（元）。設為 0 表示必須完全相符。 */
 const TOLERANCE = Number(process.env.CLOSING_TOLERANCE ?? 0);
@@ -31,8 +31,8 @@ export default handler(
     const data = normalizeClosing(body);
     const t    = data.totals;
 
-    if (t.session_count === 0 && !data.notes) {
-      throw fail(400, "當日沒有任何場次，請在備註說明（例如：公休）");
+    if (t.expected_revenue === 0 && t.actual_total === 0 && !data.notes) {
+      throw fail(400, "今日沒有任何收入與收款，請在備註說明（例如：公休）");
     }
 
     const blockers = findBlockers(data, TOLERANCE);

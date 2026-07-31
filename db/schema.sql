@@ -3,44 +3,6 @@
 -- 可重複執行（idempotent），由 POST /api/admin/migrate 套用
 --
 -- 金額一律以「新台幣元」的整數儲存，不使用小數。
-
--- ---------------------------------------------------------------------------
--- 房間 / 服務對照
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS rooms (
-  service_id   INTEGER PRIMARY KEY,           -- SimplyBook service_id
-  room_code    TEXT    NOT NULL,              -- A / B / C ...
-  name         TEXT    NOT NULL,              -- 孤兒怨
-  store_code   TEXT    NOT NULL,              -- dazhong / mrmyth
-  store_name   TEXT    NOT NULL,              -- 大忠店 / 謎先生
-  unit_price   INTEGER NOT NULL DEFAULT 0,    -- 每人定價，用於推估應收
-  active       BOOLEAN NOT NULL DEFAULT TRUE
-);
-
-CREATE INDEX IF NOT EXISTS rooms_store_idx ON rooms (store_code);
-
--- ---------------------------------------------------------------------------
--- 訂位（webhook 與 SimplyBook 同步的落地資料）
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS bookings (
-  booking_id    TEXT PRIMARY KEY,
-  service_id    INTEGER,
-  room_code     TEXT,
-  room_name     TEXT,
-  store_code    TEXT,
-  business_date DATE    NOT NULL,
-  start_time    TEXT,                          -- HH:MM
-  client_name   TEXT,
-  headcount     INTEGER,
-  status        TEXT    NOT NULL DEFAULT 'booked',  -- booked / cancelled
-  source        TEXT    NOT NULL DEFAULT 'simplybook',
-  raw           JSONB,
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS bookings_date_idx  ON bookings (business_date, store_code);
-CREATE INDEX IF NOT EXISTS bookings_store_idx ON bookings (store_code);
-
 -- ---------------------------------------------------------------------------
 -- 員工名單（結帳頁面的下拉選單來源）
 -- ---------------------------------------------------------------------------
@@ -56,6 +18,37 @@ CREATE TABLE IF NOT EXISTS staff (
 CREATE INDEX IF NOT EXISTS staff_store_idx ON staff (store_code, active);
 
 -- ---------------------------------------------------------------------------
+-- 收入項目（對應紙本表單左欄）
+-- 老闆可自行增減，順序決定畫面上的排列
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS revenue_items (
+  id         SERIAL PRIMARY KEY,
+  store_code TEXT    NOT NULL DEFAULT 'dazhong',
+  name       TEXT    NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  active     BOOLEAN NOT NULL DEFAULT TRUE,
+  CONSTRAINT revenue_items_unique UNIQUE (store_code, name)
+);
+
+CREATE INDEX IF NOT EXISTS revenue_items_store_idx ON revenue_items (store_code, active, sort_order);
+
+-- ---------------------------------------------------------------------------
+-- 收款方式（對應紙本表單右欄）
+-- is_cash 為真的才會影響現金櫃結算
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id         SERIAL PRIMARY KEY,
+  store_code TEXT    NOT NULL DEFAULT 'dazhong',
+  name       TEXT    NOT NULL,
+  is_cash    BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  active     BOOLEAN NOT NULL DEFAULT TRUE,
+  CONSTRAINT payment_methods_unique UNIQUE (store_code, name)
+);
+
+CREATE INDEX IF NOT EXISTS payment_methods_store_idx ON payment_methods (store_code, active, sort_order);
+
+-- ---------------------------------------------------------------------------
 -- 日結單
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS daily_closings (
@@ -64,9 +57,10 @@ CREATE TABLE IF NOT EXISTS daily_closings (
   business_date     DATE    NOT NULL,
   status            TEXT    NOT NULL DEFAULT 'draft',   -- draft / locked / voided
 
-  expected_revenue  INTEGER NOT NULL DEFAULT 0,  -- 系統推估應收（當日場次總額）
-  actual_total      INTEGER NOT NULL DEFAULT 0,  -- 各收款方式合計
-  variance          INTEGER NOT NULL DEFAULT 0,  -- actual_total - expected_revenue
+  expected_revenue  INTEGER NOT NULL DEFAULT 0,  -- 收入小計（各收入項目加總）
+  discount_total    INTEGER NOT NULL DEFAULT 0,  -- 折扣
+  actual_total      INTEGER NOT NULL DEFAULT 0,  -- 收款合計（各收款方式加總）
+  variance          INTEGER NOT NULL DEFAULT 0,  -- actual_total - (expected_revenue - discount_total)
 
   opening_float     INTEGER NOT NULL DEFAULT 0,  -- 開店零用金
   expected_cash     INTEGER NOT NULL DEFAULT 0,  -- 現金櫃應有 = 零用金 + 現金收款 - 現金雜支
@@ -91,15 +85,30 @@ CREATE TABLE IF NOT EXISTS daily_closings (
 CREATE INDEX IF NOT EXISTS closings_date_idx ON daily_closings (business_date DESC);
 
 -- ---------------------------------------------------------------------------
+-- 日結的收入明細（名稱一併快照，項目日後改名不影響已結的帳）
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS closing_revenue_lines (
+  id         SERIAL PRIMARY KEY,
+  closing_id INTEGER NOT NULL REFERENCES daily_closings (id) ON DELETE CASCADE,
+  item_id    INTEGER,
+  item_name  TEXT    NOT NULL,
+  amount     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS closing_revenue_closing_idx ON closing_revenue_lines (closing_id);
+
+-- ---------------------------------------------------------------------------
 -- 收款明細
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payment_lines (
-  id         SERIAL PRIMARY KEY,
-  closing_id INTEGER NOT NULL REFERENCES daily_closings (id) ON DELETE CASCADE,
-  method     TEXT    NOT NULL,   -- cash / credit_card / linepay / jkopay / twpay / prepaid / transfer / other
-  amount     INTEGER NOT NULL DEFAULT 0,
-  ref_no     TEXT,               -- 刷卡機結帳單號、平台批次號
-  note       TEXT
+  id          SERIAL PRIMARY KEY,
+  closing_id  INTEGER NOT NULL REFERENCES daily_closings (id) ON DELETE CASCADE,
+  method_id   INTEGER,
+  method_name TEXT    NOT NULL,  -- 名稱快照
+  is_cash     BOOLEAN NOT NULL DEFAULT FALSE,
+  amount      INTEGER NOT NULL DEFAULT 0,
+  ref_no      TEXT,              -- 刷卡機結帳單號、平台批次號
+  note        TEXT
 );
 
 CREATE INDEX IF NOT EXISTS payment_lines_closing_idx ON payment_lines (closing_id);
@@ -130,27 +139,6 @@ CREATE TABLE IF NOT EXISTS cash_counts (
 );
 
 -- ---------------------------------------------------------------------------
--- 日結當下的場次快照（結帳後訂位系統再改也不影響已結的帳）
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS closing_bookings (
-  id             SERIAL PRIMARY KEY,
-  closing_id     INTEGER NOT NULL REFERENCES daily_closings (id) ON DELETE CASCADE,
-  booking_id     TEXT,
-  room_code      TEXT,
-  room_name      TEXT,
-  service_id     INTEGER,
-  start_time     TEXT,
-  client_name    TEXT,
-  headcount      INTEGER NOT NULL DEFAULT 0,
-  amount         INTEGER NOT NULL DEFAULT 0,   -- 該場次應收（可人工調整）
-  prepaid_amount INTEGER NOT NULL DEFAULT 0,   -- 其中已於線上預收的金額
-  attended       BOOLEAN NOT NULL DEFAULT TRUE,-- 是否實際到店
-  note           TEXT
-);
-
-CREATE INDEX IF NOT EXISTS closing_bookings_closing_idx ON closing_bookings (closing_id);
-
--- ---------------------------------------------------------------------------
 -- 異動紀錄
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS closing_audit_log (
@@ -168,21 +156,32 @@ CREATE INDEX IF NOT EXISTS closing_audit_closing_idx ON closing_audit_log (closi
 -- 後續新增的欄位
 -- CREATE TABLE IF NOT EXISTS 不會幫既有的表補欄位，所以另外列出來
 -- ---------------------------------------------------------------------------
-ALTER TABLE daily_closings ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES staff (id);
+ALTER TABLE daily_closings ADD COLUMN IF NOT EXISTS staff_id       INTEGER REFERENCES staff (id);
+ALTER TABLE daily_closings ADD COLUMN IF NOT EXISTS discount_total INTEGER NOT NULL DEFAULT 0;
 
 -- ---------------------------------------------------------------------------
--- 房間種子資料（沿用 SERVICE_MAP，unit_price 之後用後台或 SQL 調整）
+-- 收入項目 / 收款方式種子資料（依大忠店現行紙本表單）
 -- ---------------------------------------------------------------------------
-INSERT INTO rooms (service_id, room_code, name, store_code, store_name) VALUES
-  (2,  'A', '孤兒怨',   'dazhong', '大忠店'),
-  (3,  'B', '屎力全開', 'dazhong', '大忠店'),
-  (15, 'C', '越獄者',   'dazhong', '大忠店'),
-  (14, 'D', '詭廁',     'dazhong', '大忠店'),
-  (11, 'E', '詭獄',     'mrmyth',  '謎先生'),
-  (17, 'F', '詭獄加場', 'mrmyth',  '謎先生'),
-  (16, 'G', '詭店',     'mrmyth',  '謎先生')
-ON CONFLICT (service_id) DO UPDATE
-  SET room_code  = EXCLUDED.room_code,
-      name       = EXCLUDED.name,
-      store_code = EXCLUDED.store_code,
-      store_name = EXCLUDED.store_name;
+INSERT INTO revenue_items (name, store_code, sort_order) VALUES
+  ('桌遊入場', 'dazhong', 10),
+  ('出租',     'dazhong', 20),
+  ('販售',     'dazhong', 30),
+  ('詭廁',     'dazhong', 40),
+  ('屎力全開', 'dazhong', 50),
+  ('孤兒怨',   'dazhong', 60),
+  ('越獄者',   'dazhong', 70),
+  ('蝦皮',     'dazhong', 80),
+  ('711',      'dazhong', 90)
+ON CONFLICT (store_code, name) DO NOTHING;
+
+INSERT INTO payment_methods (name, store_code, is_cash, sort_order) VALUES
+  ('現金',     'dazhong', TRUE,  10),
+  ('LINE Pay', 'dazhong', FALSE, 20),
+  ('街口',     'dazhong', FALSE, 30),
+  ('轉帳',     'dazhong', FALSE, 40),
+  ('信用卡',   'dazhong', FALSE, 50),
+  ('文化幣',   'dazhong', FALSE, 60),
+  ('訂金',     'dazhong', FALSE, 70),
+  ('蝦皮',     'dazhong', FALSE, 80),
+  ('711',      'dazhong', FALSE, 90)
+ON CONFLICT (store_code, name) DO NOTHING;
