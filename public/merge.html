@@ -3,164 +3,273 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#12100f">
+<meta name="theme-color" content="#183a36">
 <title>密室合成 — 勃根地密室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#12100f; --card:#1c1917; --line:#332e2b; --ink:#f5f1ed; --dim:#a09892;
-    --accent:#c9a227; --ok:#3fa66a; --bad:#d9534f; --warn:#d99a2b;
-    --cell:#2a2522; --cell2:#241f1c; --fog:#15120f;
+    --ink:#1b3a38; --dim:#35605b; --white:#ffffff;
+    --cream:#fff8e8; --cream2:#f1dfbf; --creamLine:#e0c48e; --creamShadow:#a98549;
+    --tray:#c5ccc3; --cell:#f4f5f0; --cell2:#eceee8;
+    --teal1:#7fe0d6; --teal2:#2f9d94; --tealLine:#1d5a57; --tealShadow:#165450;
+    --gold1:#fff3c8; --gold2:#ffd36b; --goldLine:#c28a2a; --goldShadow:#a26a12;
+    --green:#3dc24a; --red:#e2483d;
+    --num:"Baloo 2","Noto Sans TC",-apple-system,"PingFang TC",sans-serif;
+    --zh:"Noto Sans TC",-apple-system,"PingFang TC",sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.5 -apple-system,"PingFang TC","Noto Sans TC",sans-serif;overscroll-behavior:none}
-  body{padding-bottom:calc(132px + env(safe-area-inset-bottom))}
-  .app{max-width:520px;margin:0 auto;padding:10px 12px 0}
-  .em{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;line-height:1}
+  html,body{margin:0;min-height:100%;overscroll-behavior:none}
+  body{font:15px/1.4 var(--zh);color:var(--white);
+       background:radial-gradient(120% 60% at 50% 0%,#3b6f68 0%,#23504a 45%,#183a36 100%) fixed #183a36;
+       padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+  .app{max-width:440px;margin:0 auto;padding:12px 10px 0}
+  img{-webkit-user-drag:none;user-select:none}
+  .it{filter:drop-shadow(0 2px 2px rgba(0,0,0,.28))}
+  .out{text-shadow:0 1px 0 #1b2b2a,1px 0 0 #1b2b2a,-1px 0 0 #1b2b2a,0 -1px 0 #1b2b2a,0 2px 2px rgba(0,0,0,.35)}
+  .ico{display:inline-block;vertical-align:middle;width:14px;height:14px;flex:none}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:disabled{cursor:not-allowed}
 
-  /* ---------- HUD ---------- */
-  .hud{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-  .lvl{width:52px;height:52px;border-radius:50%;flex:none;position:relative;
-       background:conic-gradient(var(--accent) var(--pct,0%),#3a3330 0);display:grid;place-items:center}
-  .lvl::before{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--card)}
-  .lvl b{position:relative;font-size:18px}
-  .lvl small{position:absolute;bottom:-14px;left:0;right:0;text-align:center;font-size:10px;color:var(--dim)}
-  .res{flex:1;display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);
-       border-radius:20px;padding:6px 10px;min-width:0;position:relative}
-  .res .em{font-size:18px}
-  .res b{font-variant-numeric:tabular-nums;font-size:15px}
-  .res small{position:absolute;left:0;right:0;bottom:-15px;text-align:center;font-size:10px;color:var(--warn)}
-  .res.plus::after{content:"＋";margin-left:auto;color:var(--accent);font-weight:700}
-  .chest{flex:none;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);
-         padding:4px 8px;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1}
-  .chest .em{font-size:22px}
-  .chest small{font-size:10px;color:var(--dim);margin-top:3px}
-  .chest.ready{border-color:var(--accent);box-shadow:0 0 0 2px #c9a22744;animation:bounce 1.2s infinite}
-  .chest.ready small{color:var(--accent);font-weight:700}
-  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  /* ---------- 頂部資源列 ---------- */
+  .hud{display:flex;align-items:center;gap:8px;padding:2px 0 10px}
+  .lvl{width:46px;height:46px;border-radius:50%;flex:none;position:relative;
+       background:conic-gradient(#3fb4ff var(--pct,0%),#1b3550 0);display:grid;place-items:center;
+       box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .lvl b{width:36px;height:36px;border-radius:50%;background:#13283a;display:grid;place-items:center;
+         font:800 18px/1 var(--num)}
+  .lvl small{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);white-space:nowrap;
+             font:800 10px/14px var(--num);color:#9fe0ff;background:rgba(10,24,24,.7);border-radius:6px;padding:0 5px}
+  .pill{flex:1;position:relative;height:32px;min-width:0;display:flex;align-items:center;
+        background:rgba(10,24,24,.55);border:2px solid rgba(255,255,255,.18);border-radius:999px;padding:0 3px 0 21px}
+  .pill > svg{position:absolute;left:-6px;top:-3px;width:30px;height:30px}
+  .pill b{flex:1;text-align:center;font:800 15px/1 var(--num);min-width:0;white-space:nowrap}
+  .pill .plus{width:20px;height:20px;border-radius:50%;background:#fff;color:#1b2b2a;border:0;padding:0;
+              font:800 16px/20px var(--num);text-align:center;flex:none}
+  .pill .timer{position:absolute;left:36px;bottom:-14px;font:800 11px/15px var(--num);color:#ffb347;
+               background:rgba(10,24,24,.7);border-radius:6px;padding:0 5px}
+  .pill.wide{padding-right:8px}
+  .cartBtn{width:34px;height:34px;flex:none;background:none;border:0;padding:0}
+  @media (max-width:350px){.pill .plus{display:none}.pill{padding-right:6px}.hud{gap:6px}.lvl{width:40px;height:40px}.lvl b{width:31px;height:31px;font-size:16px}.pill.wide{flex:1.4}}
+  .cartBtn svg{width:34px;height:34px}
 
-  /* ---------- 訂單 ---------- */
-  .orders{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0 10px}
-  .order{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px}
-  .order .who{display:flex;align-items:center;gap:6px;font-size:13px}
-  .order .who .em{font-size:24px}
-  .order .who b{display:block;font-size:13px}
-  .order .who span{font-size:11px;color:var(--dim);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .order .line{font-size:11px;color:var(--dim);line-height:1.3;min-height:28px}
-  .needs{display:flex;gap:6px;flex-wrap:wrap}
-  .need{position:relative;width:44px;height:44px;border-radius:9px;background:var(--cell);display:grid;place-items:center}
-  .need .em{font-size:24px}
-  .need i{position:absolute;left:2px;top:1px;font-size:9px;font-style:normal;color:var(--dim)}
-  .need s{position:absolute;right:2px;bottom:1px;font-size:10px;text-decoration:none;color:var(--dim);font-variant-numeric:tabular-nums}
-  .need.ok{outline:2px solid var(--ok)} .need.ok s{color:var(--ok)}
-  .order .reward{font-size:12px;color:var(--accent);display:flex;gap:8px}
-  .order .acts{display:flex;gap:6px}
-  .order button{flex:1;padding:8px 4px;font-size:13px}
-  .order button.skip{flex:0 0 auto;padding:8px}
+  /* ---------- 活動卡＋訂單 ---------- */
+  .top{display:flex;gap:8px;align-items:flex-end;margin-top:6px}
+  .chest{width:92px;height:156px;flex:none;border-radius:16px;border:0;padding:4px;
+         background:linear-gradient(#e5a24a,#c27420);box-shadow:0 3px 0 #7a4210,0 6px 10px rgba(0,0,0,.35)}
+  .chest > div{height:100%;border-radius:12px;background:linear-gradient(#4fc46a,#2f9a4a);
+               display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 4px}
+  .chest img{width:62px;height:62px}
+  .chest .bar{width:100%;height:16px;border-radius:999px;background:#1d4a2a;position:relative;overflow:hidden}
+  .chest .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#ffe680,#f5a312)}
+  .chest .bar span{position:absolute;inset:0;text-align:center;font:800 11px/16px var(--num)}
+  .chest .lbl{font:900 12px/1.2 var(--zh)}
+  .chest.ready{animation:bounce 1.2s infinite}
+  .chest.ready > div{background:linear-gradient(#ffd34d,#f5a312)}
+  .chest.ready .bar span{text-shadow:0 1px 0 #7a4210}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 
-  button{background:var(--accent);color:#1a1512;border:0;border-radius:8px;
-         padding:10px 14px;font:600 14px/1 inherit;cursor:pointer}
-  button.ghost{background:transparent;color:var(--dim);border:1px solid var(--line)}
-  button.danger{background:var(--bad);color:#fff}
-  button:disabled{opacity:.4;cursor:not-allowed}
+  .orders{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+  .order{position:relative;height:196px}
+  .order .av{position:absolute;left:0;top:0;width:80px;height:80px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
+  .order .rew{position:absolute;right:0;top:6px;background:rgba(12,28,28,.78);border-radius:10px;padding:4px 7px;
+              display:flex;flex-direction:column;gap:1px;font:800 12px/1.25 var(--num)}
+  .order .rew span{display:flex;align-items:center;gap:3px}
+  .order .rew .xp{color:#9fe0ff}
+  .order .card{position:absolute;left:0;right:0;top:78px;height:80px;border-radius:14px;
+               background:linear-gradient(var(--cream),var(--cream2));border:3px solid var(--creamLine);
+               box-shadow:0 4px 0 var(--creamShadow),0 6px 10px rgba(0,0,0,.3);
+               display:flex;align-items:center;justify-content:center;gap:6px}
+  .order.ok .card{border-color:#7fd17a}
+  .need{width:52px;height:52px;border-radius:10px;background:#f7ecd5;box-shadow:inset 0 2px 3px rgba(120,90,40,.25);
+        position:relative;display:grid;place-items:center}
+  .need img{width:44px;height:44px}
+  .need.miss img{opacity:.5}
+  .need .cnt{position:absolute;right:2px;bottom:0;font:800 12px/1.2 var(--num)}
+  .need svg{position:absolute;right:-6px;bottom:-6px;width:22px;height:22px}
+  .order .acts{position:absolute;left:0;right:0;bottom:0;display:flex;gap:4px}
+  .btnGo{flex:1;height:32px;border-radius:10px;border:2px solid #1f7a2a;
+         background:linear-gradient(#8ee66b,#3fb04a);box-shadow:0 3px 0 #1f6a28;color:#fff;
+         font:900 14px/1 var(--zh);text-shadow:0 1px 0 #1f6a28}
+  .btnGo:disabled{border-color:#5d7d78;background:linear-gradient(#a9bdb9,#87a29d);box-shadow:0 3px 0 #5d7d78;
+                  color:#e6efed;text-shadow:none}
+  .btnSkip{width:34px;height:32px;border-radius:10px;border:2px solid rgba(255,255,255,.35);background:rgba(10,24,24,.45);
+           display:grid;place-items:center;padding:0}
 
   /* ---------- 棋盤 ---------- */
-  .board{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;touch-action:none;user-select:none;
-         background:#0d0b0a;border:1px solid var(--line);border-radius:14px;padding:6px}
-  .cell{aspect-ratio:1;border-radius:9px;background:var(--cell);position:relative;display:grid;place-items:center;
-        cursor:pointer;transition:transform .08s}
-  .cell:nth-child(odd){background:var(--cell2)}
-  .cell .em{font-size:clamp(22px,7vw,38px);pointer-events:none}
-  .cell.sel{outline:2px solid var(--ink);outline-offset:-2px}
-  .cell.over{outline:2px solid var(--accent);outline-offset:-2px;transform:scale(1.06)}
-  .cell.src .em{opacity:.25}
-  .cell.fog{background:var(--fog)}
-  .cell.fog .em{opacity:.5;font-size:clamp(18px,5vw,28px)}
-  .cell .lv{position:absolute;left:3px;top:2px;font-size:10px;font-style:normal;color:var(--dim);
-            background:#0008;border-radius:4px;padding:0 3px;pointer-events:none}
-  .cell .crown{position:absolute;left:1px;bottom:1px;font-size:13px;pointer-events:none}
-  .cell .bolt{position:absolute;right:2px;bottom:1px;font-size:10px;font-style:normal;color:#ffd84a;
-              background:#0009;border-radius:4px;padding:0 3px;pointer-events:none;font-variant-numeric:tabular-nums}
-  .cell .bolt.cd{color:var(--dim)}
-  .cell.gen{background:#2f2823;box-shadow:inset 0 0 0 1px #5a4a2a}
-  .cell.bub{background:radial-gradient(circle at 35% 30%,#ffffff22,#7fd3ff33 55%,#ff9ff333);
-            box-shadow:inset 0 0 0 2px #9fe4ff88}
-  .cell.bub .bolt{color:#9fe4ff}
+  .board{margin-top:14px;padding:6px;border-radius:16px;background:var(--tray);
+         box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 4px 10px rgba(0,0,0,.35);
+         display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;touch-action:none;user-select:none}
+  .cell{aspect-ratio:1;border-radius:9px;background:var(--cell);box-shadow:inset 0 -2px 0 rgba(0,0,0,.08);
+        position:relative;display:grid;place-items:center;cursor:pointer}
+  .cell:nth-child(even){background:var(--cell2)}
+  .cell.empty{background:rgba(255,255,255,.28);box-shadow:none}
+  .cell.fog{background:#9fb0ac;box-shadow:inset 0 0 0 2px #8a9c98}
+  .cell.fog img{opacity:.55;width:70%;height:70%;filter:none}
+  .cell.bub{background:transparent;box-shadow:none}
+  .cell > img{width:86%;height:86%;pointer-events:none}
+  .cell.bub > img{width:66%;height:66%}
+  .cell .bubble{position:absolute;inset:1px;border-radius:50%;border:1.5px solid rgba(255,255,255,.85);pointer-events:none;
+       background:radial-gradient(circle at 30% 26%,rgba(255,255,255,.95) 0 7%,rgba(255,255,255,.18) 26%,rgba(255,160,240,.28) 62%,rgba(110,220,255,.55) 100%)}
+  .cell .crown{position:absolute;left:-3px;bottom:-3px;width:18px;height:18px;pointer-events:none}
+  .cell .chk{position:absolute;right:-3px;bottom:-3px;width:19px;height:19px;pointer-events:none}
+  .cell .bolt{position:absolute;right:-3px;bottom:-4px;display:flex;align-items:center;pointer-events:none;
+              font:800 11px/1 var(--num);color:#fff}
+  .cell .bolt svg{width:18px;height:18px}
+  .cell .bolt b{margin-left:-3px}
+  .cell .cd{position:absolute;right:-4px;top:-4px;display:flex;align-items:center;gap:1px;pointer-events:none;
+            background:rgba(10,24,24,.82);border-radius:999px;padding:1px 4px 1px 1px;font:800 10px/1 var(--num);color:#ffd34d}
+  .cell .cd svg{width:15px;height:15px}
+  .cell .price{position:absolute;right:-3px;bottom:-4px;display:flex;align-items:center;gap:1px;pointer-events:none;
+               background:rgba(10,24,24,.82);border-radius:999px;padding:1px 5px 1px 2px;font:800 11px/1 var(--num)}
+  .cell .price svg{width:13px;height:13px}
+  .cell .br{position:absolute;inset:-3px;pointer-events:none;display:none;
+    background:
+      linear-gradient(#fff,#fff) left top/12px 3px no-repeat, linear-gradient(#fff,#fff) left top/3px 12px no-repeat,
+      linear-gradient(#fff,#fff) right top/12px 3px no-repeat, linear-gradient(#fff,#fff) right top/3px 12px no-repeat,
+      linear-gradient(#fff,#fff) left bottom/12px 3px no-repeat, linear-gradient(#fff,#fff) left bottom/3px 12px no-repeat,
+      linear-gradient(#fff,#fff) right bottom/12px 3px no-repeat, linear-gradient(#fff,#fff) right bottom/3px 12px no-repeat}
+  .cell.sel .br{display:block}
+  .cell.over{outline:3px solid #ffd34d;outline-offset:-1px}
+  .cell.src > img{opacity:.25}
   .cell.pop{animation:pop .3s}
   .cell.shake{animation:shake .25s}
   @keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
   @keyframes shake{0%,100%{transform:translateX(0)}30%{transform:translateX(-4px)}60%{transform:translateX(4px)}}
-  .dragghost{position:fixed;left:0;top:0;pointer-events:none;z-index:50;font-size:42px;transform:translate(-50%,-50%);
-         filter:drop-shadow(0 6px 10px #000c);display:none}
+  .dragghost{position:fixed;left:0;top:0;width:58px;height:58px;pointer-events:none;z-index:50;
+             transform:translate(-50%,-50%);filter:drop-shadow(0 6px 8px rgba(0,0,0,.5));display:none}
   .dragghost.on{display:block}
 
-  /* ---------- 底部 ---------- */
-  .bar{position:fixed;left:0;right:0;bottom:0;background:#12100fee;backdrop-filter:blur(8px);
-       border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
-  .bar .in{max-width:520px;margin:0 auto;display:flex;gap:8px;align-items:stretch}
-  .sq{flex:none;width:58px;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
-  .sq .em{font-size:24px}
-  .sq small{font-size:10px;color:var(--dim)}
-  .info{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0;min-height:72px}
-  .info b{font-size:14px;display:block}
-  .info p{margin:2px 0 6px;font-size:12px;color:var(--dim);line-height:1.35}
-  .info .acts{display:flex;gap:6px;flex-wrap:wrap}
-  .info .acts button{padding:7px 10px;font-size:12px}
+  /* ---------- 底部資訊列 ---------- */
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:20;
+       background:linear-gradient(rgba(10,30,28,0),rgba(10,30,28,.75) 28%);
+       padding:12px 10px calc(14px + env(safe-area-inset-bottom))}
+  .bar .in{max-width:440px;margin:0 auto;display:flex;gap:8px;align-items:flex-start}
+  .tealBtn{width:58px;height:58px;flex:none;border-radius:14px;border:3px solid var(--tealLine);
+           background:linear-gradient(var(--teal1),var(--teal2));
+           box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 4px 0 var(--tealShadow);display:grid;place-items:center;padding:0}
+  .tealBtn svg{width:34px;height:34px}
+  .sqWrap{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+  .sqWrap small{font:800 12px/1 var(--num)}
+  .info{flex:1;min-width:0;min-height:62px;border-radius:14px;background:linear-gradient(#e9fbf7,#c9ece6);
+        border:3px solid #5fb8ae;box-shadow:0 4px 0 #2f7f78;color:var(--ink);
+        padding:5px 6px 5px 8px;display:flex;align-items:center;gap:6px}
+  .info .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .info .ttl{display:flex;align-items:center;gap:5px;background:#8fd3ca;border-radius:999px;padding:1px 8px 1px 2px;
+             align-self:flex-start;max-width:100%}
+  .info .ttl i{width:18px;height:18px;flex:none;border-radius:50%;background:#2f7fd8;color:#fff;
+               font:800 12px/18px var(--num);font-style:normal;text-align:center}
+  .info .ttl b{font:900 13px/1.3 var(--zh);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .info p{margin:0;font:700 11.5px/1.35 var(--zh);color:var(--dim)}
+  .info .acts{display:flex;gap:5px;flex-wrap:wrap}
+  .mini{height:26px;border-radius:8px;border:2px solid var(--tealLine);background:#fff;color:var(--ink);
+        box-shadow:0 2px 0 #7fb3ad;padding:0 9px;font:900 12px/1 var(--zh)}
+  .mini.go{background:linear-gradient(#8ee66b,#3fb04a);border-color:#1f7a2a;color:#fff;box-shadow:0 2px 0 #1f6a28}
+  .mini:disabled{opacity:.5}
+  .sell{flex:none;width:52px;border-radius:10px;border:2px solid var(--goldLine);
+        background:linear-gradient(var(--gold1),var(--gold2));box-shadow:0 3px 0 var(--goldShadow);
+        display:flex;flex-direction:column;align-items:center;padding:3px 0;font:900 12px/1.2 var(--zh);color:#7a4a00}
+  .sell span{display:flex;align-items:center;gap:1px;font:800 15px/1.1 var(--num)}
+  .sell svg{width:14px;height:14px}
 
   /* ---------- 提示 / 視窗 ---------- */
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));
-         max-width:min(92vw,480px);padding:10px 14px;border-radius:10px;font-size:14px;z-index:60;display:none;
-         background:#2a2522;border:1px solid var(--line);box-shadow:0 8px 24px #000a;align-items:center;gap:10px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(98px + env(safe-area-inset-bottom));z-index:60;
+         max-width:min(92vw,420px);display:none;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;
+         background:rgba(12,28,28,.92);border:2px solid rgba(255,255,255,.25);box-shadow:0 8px 20px rgba(0,0,0,.45);
+         font:700 14px/1.35 var(--zh)}
   .toast.show{display:flex}
-  .toast.e{background:#4a1f1e;border-color:var(--bad)}
-  .toast.s{background:#1c3a2a;border-color:var(--ok)}
-  .toast button{padding:6px 10px;font-size:12px}
-  .modal{position:fixed;inset:0;background:#000a;z-index:70;display:none;align-items:flex-end;justify-content:center}
+  .toast.s{border-color:#7fd17a} .toast.e{border-color:#ff8a7a}
+  .toast img{width:22px;height:22px;vertical-align:-5px}
+  .toast button{border:2px solid var(--goldLine);background:linear-gradient(var(--gold1),var(--gold2));color:#7a4a00;
+                border-radius:8px;padding:4px 10px;font:900 12px/1 var(--zh);flex:none}
+  .ti{width:18px;height:18px;vertical-align:-4px}
+  .modal{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center}
   .modal.show{display:flex}
-  .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px 16px 0 0;width:100%;max-width:520px;
-         padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:80vh;overflow:auto}
-  .sheet h2{margin:0 0 10px;font-size:16px;color:var(--accent)}
-  .sheet p{color:var(--dim);font-size:13px;margin:6px 0}
-  .offer{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
-  .offer .em{font-size:28px}
-  .offer div{flex:1} .offer b{display:block;font-size:14px} .offer span{font-size:12px;color:var(--dim)}
-  .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
-  .slot{aspect-ratio:1;border-radius:9px;background:var(--cell);display:grid;place-items:center;position:relative;cursor:pointer}
-  .slot .em{font-size:28px} .slot .lv{position:absolute;left:3px;top:2px;font-size:10px;color:var(--dim)}
-  .slot.empty{background:#15120f;border:1px dashed var(--line)}
-  .tut li{margin-bottom:8px;font-size:14px}
-  .tut .em{font-size:18px}
+  .sheet{width:100%;max-width:440px;max-height:82vh;overflow:auto;color:var(--ink);
+         background:linear-gradient(var(--cream),var(--cream2));border:3px solid var(--creamLine);border-bottom:0;
+         border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom))}
+  .sheet h2{margin:0 0 10px;font:900 18px/1.3 var(--zh);display:flex;align-items:center;gap:8px}
+  .sheet h2 img{width:34px;height:34px}
+  .sheet p{margin:6px 0;font:700 13px/1.5 var(--zh);color:#6b5a44}
+  .offer{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--creamLine);border-radius:12px;
+         padding:8px 10px;margin-bottom:8px}
+  .offer img{width:44px;height:44px}
+  .offer div{flex:1} .offer b{display:block;font:900 15px/1.3 var(--zh)} .offer span{font:700 12px/1.3 var(--zh);color:#8a7a60}
+  .big{height:40px;border-radius:12px;border:3px solid #1f7a2a;background:linear-gradient(#8ee66b,#3fb04a);
+       box-shadow:0 4px 0 #1f6a28;color:#fff;font:900 15px/1 var(--zh);padding:0 16px;text-shadow:0 1px 0 #1f6a28}
+  .big.gray{border-color:#8a7a60;background:linear-gradient(#fff,#efe3c8);box-shadow:0 4px 0 #b8a27a;color:#6b5a44;text-shadow:none}
+  .big.red{border-color:#9b2a20;background:linear-gradient(#ff8a7a,#e2483d);box-shadow:0 4px 0 #8a2018}
+  .row{display:flex;gap:8px;margin-top:12px}
+  .row > *{flex:1}
+  .slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:10px 0}
+  .slot{aspect-ratio:1;border-radius:10px;background:#fff;border:2px solid var(--creamLine);display:grid;place-items:center;padding:0}
+  .slot img{width:82%;height:82%}
+  .slot.empty{background:#f3e7cc;border-style:dashed}
+  .tut{list-style:none;margin:0;padding:0}
+  .tut li{display:flex;align-items:center;gap:10px;margin-bottom:10px;font:700 14px/1.45 var(--zh)}
+  .tut li img{width:40px;height:40px;flex:none}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gBolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fd0ff"/><stop offset="1" stop-color="#1e74d8"/></linearGradient>
+    <linearGradient id="gGem" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c8f56a"/><stop offset="1" stop-color="#3fa02a"/></linearGradient>
+    <linearGradient id="gStar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#f5a312"/></linearGradient>
+    <linearGradient id="gPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cf0"/><stop offset="1" stop-color="#b43ee0"/></linearGradient>
+    <linearGradient id="gCrown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#e09a10"/></linearGradient>
+    <linearGradient id="gCart" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f06a"/><stop offset="1" stop-color="#4ea82a"/></linearGradient>
+  </defs>
+  <symbol id="i-bolt" viewBox="0 0 64 64"><path d="M38 4L12 36h16l-6 24 30-36H36z" fill="url(#gBolt)" stroke="#123a6b" stroke-width="3" stroke-linejoin="round"/><path d="M34 10L18 31" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-gem" viewBox="0 0 64 64"><path d="M14 14h36l10 14-28 30L4 28z" fill="url(#gGem)" stroke="#24561b" stroke-width="3" stroke-linejoin="round"/><path d="M4 28h56M14 14l18 44M50 14L32 58" stroke="#24561b" stroke-opacity=".35" stroke-width="2"/><path d="M16 20h12" stroke="#fff" stroke-opacity=".75" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-star" viewBox="0 0 64 64"><path d="M32 4l8.5 17.5 19 2.5-14 13.5 3.5 19L32 47.5 15 56.5l3.5-19L4.5 24l19-2.5z" fill="url(#gStar)" stroke="#8a4d00" stroke-width="3" stroke-linejoin="round"/><path d="M24 22l6-10" stroke="#fff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-pbolt" viewBox="0 0 64 64"><path d="M38 4L12 36h16l-6 24 30-36H36z" fill="url(#gPink)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 64 64"><path d="M6 50L10 18l14 14 8-22 8 22 14-14 4 32z" fill="url(#gCrown)" stroke="#8a4d00" stroke-width="3" stroke-linejoin="round"/><circle cx="32" cy="40" r="4" fill="#ff5a6a"/></symbol>
+  <symbol id="i-check" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#3dc24a" stroke="#fff" stroke-width="5"/><path d="M19 33l9 9 18-20" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="#ffd34d" stroke="#8a4d00" stroke-width="4"/><circle cx="32" cy="32" r="18" fill="#fff6d6"/><path d="M32 20v13l8 5" fill="none" stroke="#8a4d00" stroke-width="5" stroke-linecap="round"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 64 64"><path d="M6 12h9l8 30h28l7-22H19" fill="none" stroke="url(#gCart)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="26" cy="52" r="5" fill="#4ea82a"/><circle cx="48" cy="52" r="5" fill="#4ea82a"/></symbol>
+  <symbol id="i-box" viewBox="0 0 64 64"><path d="M32 8l24 10v28L32 56 8 46V18z" fill="#e9fffb" stroke="#1d5a57" stroke-width="4" stroke-linejoin="round"/><path d="M8 18l24 10 24-10M32 28v28" fill="none" stroke="#1d5a57" stroke-width="4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 64 64"><path d="M10 26h24V12l22 20-22 20V38H10z" fill="#fff" stroke="#1d5a57" stroke-width="4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 64 64"><path d="M12 14l22 18-22 18zM34 14l22 18-22 18z" fill="#fff"/></symbol>
+</svg>
+
 <div class="app">
   <header class="hud">
-    <div class="lvl" id="lvl"><b id="lvlNum">1</b><small id="lvlXp"></small></div>
-    <div class="res plus" id="resEnergy"><span class="em">⚡</span><b id="energy">0</b><small id="energyTimer"></small></div>
-    <div class="res plus" id="resGems"><span class="em">💎</span><b id="gems">0</b></div>
-    <div class="res"><span class="em">⭐</span><b id="stars">0</b></div>
-    <button class="chest" id="chestBtn" type="button"><span class="em">📦</span><small id="chestTxt">—</small></button>
+    <div class="lvl" id="lvl" title="等級"><b id="lvlNum">1</b><small id="lvlXp"></small></div>
+    <div class="pill" id="resEnergy"><svg><use href="#i-bolt"></use></svg><b id="energy">0</b><button type="button" class="plus" aria-label="補充能量">+</button><span class="timer" id="energyTimer"></span></div>
+    <div class="pill" id="resGems"><svg><use href="#i-gem"></use></svg><b id="gems">0</b><button type="button" class="plus" aria-label="購買寶石">+</button></div>
+    <div class="pill wide"><svg><use href="#i-star"></use></svg><b id="stars">0</b></div>
+    <button type="button" class="cartBtn" id="shopBtn" aria-label="商店"><svg><use href="#i-cart"></use></svg></button>
   </header>
 
-  <section class="orders" id="orders"></section>
-  <section><div class="board" id="board"></div></section>
+  <section class="top">
+    <button type="button" class="chest" id="chestBtn" aria-label="每日寶箱">
+      <div><img class="it" src="img/merge/box.webp" alt=""><div class="bar"><i id="chestBar"></i><span id="chestPct"></span></div><span class="lbl out" id="chestTxt">—</span></div>
+    </button>
+    <div class="orders" id="orders"></div>
+  </section>
+
+  <section class="board" id="board"></section>
 </div>
 
 <footer class="bar"><div class="in">
-  <button class="sq" id="storageBtn" type="button"><span class="em">🧳</span><small id="storageCnt">0/10</small></button>
+  <div class="sqWrap">
+    <button type="button" class="tealBtn" id="storageBtn" aria-label="收納箱"><svg><use href="#i-box"></use></svg></button>
+    <small class="out" id="storageCnt">0/10</small>
+  </div>
   <div class="info" id="info"></div>
-  <button class="sq" id="shopBtn" type="button"><span class="em">🛒</span><small>商店</small></button>
+  <button type="button" class="tealBtn" id="menuBtn" aria-label="選單"><svg><use href="#i-menu"></use></svg></button>
 </div></footer>
 
-<div class="dragghost em" id="ghost"></div>
+<img class="dragghost" id="ghost" alt="">
 <div class="toast" id="toast"></div>
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
 
 <script>
 /* =====================================================================
  * 密室合成 —— 勃根地密室版「合成遊戲」
- * 單一 HTML 檔，不需建置；進度存在瀏覽器 localStorage。
+ * 單一 HTML ＋ img/merge/ 圖檔；進度存在瀏覽器 localStorage。
+ * 道具與角色圖由 Canva AI 生成，去背後轉成 WebP。
  * ===================================================================== */
 'use strict';
 
@@ -169,41 +278,42 @@ const ENERGY_MAX = 100, ENERGY_SEC = 60;      // 每 60 秒回 1 點能量
 const STORAGE_MAX = 10;
 const CHEST_HOURS = 20;
 const BUBBLE_SEC = 90, BUBBLE_CHANCE = 0.1;
-const SELL = [1, 3, 8, 20, 50, 120, 300];     // 依等級出售價（⭐）
+const SELL = [1, 3, 8, 20, 50, 120, 300];     // 依等級出售價（星星）
 const SAVE_KEY = 'bgl-merge-v1';
+const IMG = 'img/merge/';
 
-/* ---------- 合成鏈 ---------- */
+/* ---------- 合成鏈（圖檔 = img/merge/<鏈>-<等級>.webp） ---------- */
 const CHAINS = {
-  clue : { name:'線索', items:[['📄','紙條'],['📜','卷軸'],['📖','筆記本'],['🗺️','藏寶圖'],['📚','古籍'],['🔮','水晶球']] },
-  lock : { name:'鎖具', items:[['🔑','小鑰匙'],['🔒','掛鎖'],['🔐','密碼鎖'],['🗝️','古董鑰匙'],['⛓️','鎖鏈機關'],['🚪','密門']] },
-  tool : { name:'工具', items:[['🔦','手電筒'],['🔧','扳手'],['🔨','鐵鎚'],['🧲','磁鐵'],['🧰','工具箱'],['⚙️','機關核心']] },
-  elec : { name:'弱電', items:[['🔋','電池'],['🔌','電線'],['💡','燈泡'],['📟','感應器'],['🎛️','控制盒'],['🖥️','主控機']] },
-  spook: { name:'驚嚇', items:[['🕷️','蜘蛛'],['🕸️','蛛網'],['🎭','面具'],['💀','骷髏'],['👻','幽靈'],['🧟','殭屍']] },
-  snack: { name:'補給', items:[['☕','咖啡'],['🍙','飯糰'],['🍱','便當'],['🍰','蛋糕'],['🎂','慶功蛋糕']] },
-  star  : { name:'星星', collect:'stars',  values:[1, 5, 20],  items:[['⭐','星星'],['🌟','大星星'],['✨','星星堆']] },
-  gem   : { name:'寶石', collect:'gems',   values:[1, 5],      items:[['💎','寶石'],['💠','寶石簇']] },
-  energy: { name:'能量', collect:'energy', values:[5, 15],     items:[['⚡','能量飲'],['🌩️','能量桶']] },
+  clue : { name:'線索', items:['紙條','卷軸','筆記本','藏寶圖','古籍','水晶球'] },
+  lock : { name:'鎖具', items:['小鑰匙','掛鎖','密碼鎖','古董鑰匙','鎖鏈機關','密門'] },
+  tool : { name:'工具', items:['手電筒','扳手','鐵鎚','磁鐵','工具箱','機關核心'] },
+  elec : { name:'弱電', items:['電池','電線','燈泡','感應器','控制盒','主控機'] },
+  spook: { name:'驚嚇', items:['蜘蛛','蛛網','面具','骷髏','幽靈','殭屍'] },
+  snack: { name:'補給', items:['咖啡','飯糰','便當','蛋糕','慶功蛋糕'] },
+  star  : { name:'星星', collect:'stars',  values:[1, 5, 20], items:['星星','大星星','星星堆'] },
+  gem   : { name:'寶石', collect:'gems',   values:[1, 5],     items:['寶石','寶石簇'] },
+  energy: { name:'能量', collect:'energy', values:[5, 15],    items:['能量飲','能量桶'] },
 };
 const ORDER_CHAINS = ['clue', 'lock', 'tool', 'elec', 'spook', 'snack'];
 
-/* ---------- 產生器：點一下花 1⚡ 產出道具 ---------- */
+/* ---------- 產生器：點一下花 1 能量產出道具 ---------- */
 const GENS = {
-  cabinet: { e:'🗄️', n:'道具櫃',   max:10, regen:30, table:[['clue',1,40],['lock',1,35],['clue',2,9],['lock',2,8],['star',1,5],['energy',1,3]] },
-  cart   : { e:'🛒', n:'工具推車', max:10, regen:30, table:[['tool',1,40],['elec',1,35],['tool',2,9],['elec',2,8],['star',1,5],['gem',1,3]] },
-  closet : { e:'🧳', n:'驚嚇道具箱', max:8, regen:40, table:[['spook',1,55],['spook',2,25],['box',0,5],['star',1,10],['energy',1,5]] },
-  fridge : { e:'🧊', n:'員工冰箱', max:8, regen:40, table:[['snack',1,60],['snack',2,25],['star',1,10],['gem',1,5]] },
+  cabinet: { n:'道具櫃',     max:10, regen:30, table:[['clue',1,40],['lock',1,35],['clue',2,9],['lock',2,8],['star',1,5],['energy',1,3]] },
+  cart   : { n:'工具推車',   max:10, regen:30, table:[['tool',1,40],['elec',1,35],['tool',2,9],['elec',2,8],['star',1,5],['gem',1,3]] },
+  closet : { n:'驚嚇道具箱', max:8,  regen:40, table:[['spook',1,55],['spook',2,25],['box',0,5],['star',1,10],['energy',1,5]] },
+  fridge : { n:'員工冰箱',   max:8,  regen:40, table:[['snack',1,60],['snack',2,25],['star',1,10],['gem',1,5]] },
 };
 
-/* ---------- 訂單角色 ---------- */
+/* ---------- 訂單角色（頭像 = img/merge/av-<key>.webp） ---------- */
 const PEOPLE = [
-  { e:'👩‍💼', n:'店長 小雅',   lines:['新主題下週開幕，幫我準備{item}！','巡場發現少了{item}，快補上。'] },
-  { e:'🧑‍🔧', n:'弱電 阿宏',   lines:['機關接線卡住了，需要{item}。','這關的感應要重做，給我{item}。'] },
-  { e:'🧑‍🎨', n:'美術 小米',   lines:['場景想加點氣氛，{item}可以嗎？','道具太新了，{item}拿來做舊一下。'] },
-  { e:'🧔',   n:'木工 大熊',   lines:['密門框量好了，缺{item}。','今天釘到手軟，{item}救我。'] },
-  { e:'🧑‍💻', n:'策劃 阿傑',   lines:['劇情線需要一個{item}當關鍵。','謎題測試卡關，{item}應該能解。'] },
-  { e:'🕵️',   n:'玩家 偵探哥', lines:['我確定這間房藏著{item}。','破關紀念想要{item}！'] },
-  { e:'👩‍🎓', n:'玩家 學生妹', lines:['第一次玩密室，{item}好可愛想要。','包場慶生，想要{item}當佈置。'] },
-  { e:'👨‍👩‍👧', n:'家庭客',  lines:['小朋友吵著要{item}。','全家一起破關，{item}當獎品。'] },
+  { av:'manager',   n:'店長 小雅',   lines:['新主題下週開幕，幫我準備{item}！','巡場發現少了{item}，快補上。'] },
+  { av:'electric',  n:'弱電 阿宏',   lines:['機關接線卡住了，需要{item}。','這關的感應要重做，給我{item}。'] },
+  { av:'artist',    n:'美術 小米',   lines:['場景想加點氣氛，{item}可以嗎？','道具太新了，{item}拿來做舊一下。'] },
+  { av:'carpenter', n:'木工 大熊',   lines:['密門框量好了，缺{item}。','今天釘到手軟，{item}救我。'] },
+  { av:'planner',   n:'策劃 阿傑',   lines:['劇情線需要一個{item}當關鍵。','謎題測試卡關，{item}應該能解。'] },
+  { av:'detective', n:'玩家 偵探哥', lines:['我確定這間房藏著{item}。','破關紀念想要{item}！'] },
+  { av:'student',   n:'玩家 學生妹', lines:['第一次玩密室，{item}好可愛想要。','包場慶生，想要{item}當佈置。'] },
+  { av:'family',    n:'家庭客',      lines:['小朋友吵著要{item}。','全家一起破關，{item}當獎品。'] },
 ];
 
 /* =====================================================================
@@ -221,6 +331,7 @@ const rnd = (n) => Math.floor(Math.random() * n);
 const pick = (arr) => arr[rnd(arr.length)];
 const rc = (i) => [Math.floor(i / COLS), i % COLS];
 const idx = (r, c) => r * COLS + c;
+const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 
 function item(c, l, extra) { return Object.assign({ t:'item', c, l }, extra || {}); }
 function gen(k)  { return { t:'gen', k, ch: GENS[k].max, at: now() }; }
@@ -228,11 +339,36 @@ function box()   { return { t:'box' }; }
 function fog(inner) { return { t:'fog', inner: inner || null }; }
 
 function maxLevel(c) { return CHAINS[c].items.length; }
-function def(it)     { return CHAINS[it.c].items[it.l - 1]; }           // [emoji, name]
+function itemName(it) { return CHAINS[it.c].items[it.l - 1]; }
 function isMax(it)   { return it.t === 'item' && it.l >= maxLevel(it.c); }
 function sellValue(it) { return SELL[Math.min(it.l, SELL.length) - 1]; }
 function isCollect(it) { return it.t === 'item' && !!CHAINS[it.c].collect; }
 function isMovable(it) { return it && it.t !== 'fog' && !(it.t === 'item' && it.bub); }
+
+/* ---------- 圖檔路徑 ---------- */
+function imgOf(it) {
+  if (!it) return '';
+  if (it.t === 'item') return `${IMG}${it.c}-${it.l}.webp`;
+  if (it.t === 'gen')  return `${IMG}gen-${it.k}.webp`;
+  if (it.t === 'box')  return `${IMG}box.webp`;
+  if (it.t === 'fog')  return `${IMG}spook-2.webp`;
+  return '';
+}
+function nameOf(it) {
+  if (!it) return '';
+  if (it.t === 'item') return itemName(it);
+  if (it.t === 'gen')  return GENS[it.k].n;
+  if (it.t === 'box')  return '神秘箱';
+  return '蛛網';
+}
+const ti = (src) => `<img class="ti" src="${src}" alt="">`;
+const IC = {
+  star:   ti(`${IMG}star-1.webp`),
+  gem:    ti(`${IMG}gem-1.webp`),
+  energy: ti(`${IMG}energy-1.webp`),
+  box:    ti(`${IMG}box.webp`),
+};
+const svg = (id, cls) => `<svg${cls ? ` class="${cls}"` : ''}><use href="#${id}"></use></svg>`;
 
 function xpNeed(level) { return Math.round(30 * Math.pow(level, 1.35)); }
 function orderCap()    { return Math.min(6, 2 + Math.floor((S.level - 1) / 2)); }
@@ -278,7 +414,17 @@ function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } cat
 function load() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.v === 1 && Array.isArray(s.board) && s.board.length === N) return s; }
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && s.v === 1 && Array.isArray(s.board) && s.board.length === N) {
+        // 舊版存檔的訂單角色用的是 emoji，換成頭像
+        for (const o of s.orders || []) if (o && o.who && !o.who.av) {
+          const p = PEOPLE.find((x) => x.n === o.who.n);
+          o.who = { av: p ? p.av : 'manager', n: o.who.n };
+        }
+        return s;
+      }
+    }
   } catch (_) {}
   return null;
 }
@@ -323,7 +469,7 @@ function addXp(n) {
     S.level++;
     S.energy += 15; S.gems += 2;
     const i = placeNew(box());
-    toast(`🎉 升級到 Lv.${S.level}！獲得 ⚡15、💎2${i >= 0 ? '、🎁 神秘箱' : ''}`, 's', 3500);
+    toast(`升級到 Lv.${S.level}！獲得 ${IC.energy}15 ${IC.gem}2${i >= 0 ? ` ${IC.box}神秘箱` : ''}`, 's', 3500);
   }
 }
 
@@ -377,7 +523,7 @@ function drop(src, dst) {
       S.board[other] = item(a.c, a.l + 1);
       animate(other, 'pop');
       produced = 2;
-      toast('✨ 五合一：多送一個！', 's');
+      toast('五合一：多送一個！', 's');
     } else {
       S.board[dst] = next;
     }
@@ -387,9 +533,9 @@ function drop(src, dst) {
     addXp(next.l * 2 * produced);
     if (!CHAINS[a.c].collect && Math.random() < BUBBLE_CHANCE) {
       const i = placeNew(item(a.c, a.l + 1, { bub: now() + BUBBLE_SEC * 1000 }), dst);
-      if (i >= 0) toast(`🫧 出現泡泡！花 💎${bubblePrice(S.board[i])} 可買下 ${def(S.board[i])[1]}`, '', 3000);
+      if (i >= 0) toast(`出現泡泡！花 ${IC.gem}${bubblePrice(S.board[i])} 可買下${itemName(S.board[i])}`, '', 3000);
     }
-    if (isMax(next)) toast(`👑 ${def(next)[1]} 已是最高等級！`, 's');
+    if (isMax(next)) toast(`${itemName(next)} 已是最高等級！`, 's');
   } else {                                        // 交換
     if (!isMovable(b)) { animate(dst, 'shake'); return false; }
     S.board[dst] = a; S.board[src] = b;
@@ -403,8 +549,8 @@ function bubblePrice(it) { return Math.max(1, it.l); }
 
 function spawnFrom(i) {
   const g = S.board[i], G = GENS[g.k];
-  if (g.ch <= 0) { toast(`${G.n} 正在補貨，${fmtSec(genNextIn(g))} 後回復`, 'e'); return false; }
-  if (S.energy <= 0) { toast('⚡ 能量不足，到商店補充或等待回復', 'e'); openShop(); return false; }
+  if (g.ch <= 0) { toast(`${G.n}補貨中，${fmtSec(genNextIn(g))} 後回復`, 'e'); return false; }
+  if (S.energy <= 0) { toast(`${IC.energy}能量不足，到商店補充或等待回復`, 'e'); openShop(); return false; }
   if (!emptyCells().length) { toast('棋盤已滿，先合成或出售一些道具', 'e'); return false; }
   const [c, l] = weighted(G.table);
   const it = c === 'box' ? box() : item(c, l);
@@ -419,14 +565,13 @@ function spawnFrom(i) {
 function genNextIn(g) { return Math.max(0, Math.ceil((g.at + GENS[g.k].regen * 1000 - now()) / 1000)); }
 
 function openBox(i) {
-  const chains = ORDER_CHAINS;
   const roll = Math.random();
-  const c = pick(chains);
+  const c = pick(ORDER_CHAINS);
   const l = roll < 0.55 ? 1 : roll < 0.85 ? 2 : roll < 0.97 ? 3 : 4;
   const it = Math.random() < 0.12 ? item(pick(['star', 'gem', 'energy']), 1) : item(c, Math.min(l, maxLevel(c)));
   S.board[i] = it;
   animate(i, 'pop');
-  toast(`🎁 開出 ${def(it)[0]} ${def(it)[1]}`, 's');
+  toast(`開出 ${ti(imgOf(it))}${itemName(it)}`, 's');
   afterChange();
 }
 
@@ -434,16 +579,16 @@ function collect(i) {
   const it = S.board[i], ch = CHAINS[it.c], v = ch.values[it.l - 1];
   S[ch.collect] += v;
   S.board[i] = null;
-  toast(`+${v} ${def(it)[0]}`, 's', 1200);
+  toast(`+${v} ${ti(imgOf(item(it.c, 1)))}`, 's', 1200);
   afterChange();
 }
 
 function buyBubble(i) {
   const it = S.board[i], p = bubblePrice(it);
-  if (S.gems < p) { toast(`💎 不足，需要 ${p} 顆`, 'e'); return; }
+  if (S.gems < p) { toast(`${IC.gem}寶石不足，需要 ${p} 顆`, 'e'); return; }
   S.gems -= p; delete it.bub;
   animate(i, 'pop');
-  toast(`買下 ${def(it)[1]}`, 's');
+  toast(`買下${itemName(it)}`, 's');
   afterChange();
 }
 
@@ -452,7 +597,7 @@ function sell(i) {
   S.board[i] = null; S.stars += v; sel = null;
   lastSold = { i, it, v };
   afterChange();
-  toast(`出售 ${def(it)[1]} +${v}⭐`, '', 5000, { label:'復原', fn: undoSell });
+  toast(`出售${itemName(it)} +${v}${IC.star}`, '', 5000, { label:'復原', fn: undoSell });
 }
 function undoSell() {
   if (!lastSold) return;
@@ -493,8 +638,8 @@ function newOrder() {
   const xp = need.reduce((s, x) => s + x.q * x.l * 5, 0);
   const topL = Math.max(...need.map((x) => x.l));
   const who = pick(PEOPLE);
-  const line = pick(who.lines).replace('{item}', def(item(need[0].c, need[0].l))[1]);
-  return { id: ++S.orderSeq, who: { e: who.e, n: who.n }, line, need, stars, xp, gems: topL >= 4 ? 1 : 0 };
+  const line = pick(who.lines).replace('{item}', itemName(item(need[0].c, need[0].l)));
+  return { id: ++S.orderSeq, who: { av: who.av, n: who.n }, line, need, stars, xp, gems: topL >= 4 ? 1 : 0 };
 }
 function fillOrders() { for (let k = 0; k < S.orders.length; k++) if (!S.orders[k]) S.orders[k] = newOrder(); }
 
@@ -517,31 +662,32 @@ function deliver(k) {
   }
   S.stars += o.stars; S.gems += o.gems; S.stats.orders++;
   S.orders[k] = null;
-  toast(`✅ ${o.who.n} 很滿意！+${o.stars}⭐${o.gems ? ` +${o.gems}💎` : ''}`, 's');
+  toast(`${o.who.n}很滿意！+${o.stars}${IC.star}${o.gems ? ` +${o.gems}${IC.gem}` : ''}`, 's');
   addXp(o.xp);
   sel = null;
   afterChange();
   return true;
 }
 function skipOrder(k) {
-  if (S.gems < 1) { toast('💎 不足，跳過訂單需要 1 顆', 'e'); return; }
+  if (S.gems < 1) { toast(`${IC.gem}寶石不足，跳過訂單需要 1 顆`, 'e'); return; }
   S.gems--; S.orders[k] = null; afterChange();
 }
 
 /* ---------- 每日寶箱 / 商店 ---------- */
-function chestReady() { return now() - S.chestAt >= CHEST_HOURS * 3600 * 1000; }
+function chestLeft() { return Math.max(0, Math.ceil((S.chestAt + CHEST_HOURS * 3600 * 1000 - now()) / 1000)); }
+function chestReady() { return chestLeft() === 0; }
 function claimChest() {
-  if (!chestReady()) { toast(`下次寶箱：${fmtSec(Math.ceil((S.chestAt + CHEST_HOURS * 3600 * 1000 - now()) / 1000))} 後`); return; }
+  if (!chestReady()) { toast(`下次寶箱：${fmtHms(chestLeft())}後`); return; }
   S.chestAt = now(); S.energy += 25; S.gems += 2;
   const i = placeNew(box());
-  toast(`📦 每日寶箱：⚡25、💎2${i >= 0 ? '、🎁 神秘箱' : ''}`, 's', 3500);
+  toast(`每日寶箱：${IC.energy}25 ${IC.gem}2${i >= 0 ? ` ${IC.box}神秘箱` : ''}`, 's', 3500);
   afterChange();
 }
 
 const OFFERS = [
-  { e:'⚡', b:'能量 +30', s:'💎 10', fn() { if (S.gems < 10) return toast('💎 不足', 'e'); S.gems -= 10; S.energy += 30; toast('⚡ +30', 's'); } },
-  { e:'💎', b:'寶石 +10', s:'⭐ 300', fn() { if (S.stars < 300) return toast('⭐ 不足', 'e'); S.stars -= 300; S.gems += 10; toast('💎 +10', 's'); } },
-  { e:'🎁', b:'神秘箱 ×1', s:'⭐ 60',  fn() { if (S.stars < 60) return toast('⭐ 不足', 'e'); if (placeNew(box()) < 0) return toast('棋盤已滿', 'e'); S.stars -= 60; toast('🎁 已放到棋盤', 's'); } },
+  { img:'energy-2', b:'能量 +30',  s:'寶石 10 顆', fn() { if (S.gems < 10) return toast(`${IC.gem}寶石不足`, 'e'); S.gems -= 10; S.energy += 30; toast(`${IC.energy}+30`, 's'); } },
+  { img:'gem-2',    b:'寶石 +10',  s:'星星 300 顆', fn() { if (S.stars < 300) return toast(`${IC.star}星星不足`, 'e'); S.stars -= 300; S.gems += 10; toast(`${IC.gem}+10`, 's'); } },
+  { img:'box',      b:'神秘箱 ×1', s:'星星 60 顆',  fn() { if (S.stars < 60) return toast(`${IC.star}星星不足`, 'e'); if (placeNew(box()) < 0) return toast('棋盤已滿', 'e'); S.stars -= 60; toast(`${IC.box}已放到棋盤`, 's'); } },
 ];
 
 /* =====================================================================
@@ -558,10 +704,10 @@ function tick() {
     if (it.t === 'gen') {
       const G = GENS[it.k];
       if (it.ch >= G.max) it.at = t;
-      else while (it.ch < G.max && it.at + G.regen * 1000 <= t) { it.ch++; it.at += G.regen * 1000; boardDirty = true; }
-    } else if (it.t === 'item' && it.bub && it.bub <= t) {
-      S.board[i] = null; boardDirty = true;
-      if (sel === i) sel = null;
+      else { boardDirty = true; while (it.ch < G.max && it.at + G.regen * 1000 <= t) { it.ch++; it.at += G.regen * 1000; } }
+    } else if (it.t === 'item' && it.bub) {
+      boardDirty = true;
+      if (it.bub <= t) { S.board[i] = null; if (sel === i) sel = null; }
     }
   }
   renderHud();
@@ -583,28 +729,38 @@ function buildBoard() {
   }
 }
 
-function cellHtml(it) {
-  if (!it) return '';
-  if (it.t === 'fog') return '<span class="em">🕸️</span>';
-  if (it.t === 'box') return '<span class="em">🎁</span>';
+/** 目前訂單需要的道具（打勾用） */
+function wantedSet() {
+  const s = new Set();
+  for (const o of S.orders) if (o) for (const x of o.need) s.add(`${x.c}-${x.l}`);
+  return s;
+}
+
+function cellHtml(it, wanted) {
+  if (!it) return '<i class="br"></i>';
+  let h = `<img class="it" src="${imgOf(it)}" alt="${esc(nameOf(it))}" draggable="false">`;
   if (it.t === 'gen') {
-    const G = GENS[it.k];
-    const badge = it.ch > 0 ? `⚡${it.ch}` : fmtSec(genNextIn(it));
-    return `<span class="em">${G.e}</span><i class="bolt${it.ch > 0 ? '' : ' cd'}">${badge}</i>`;
+    h += it.ch > 0
+      ? `<span class="bolt">${svg('i-pbolt')}<b class="out">${it.ch}</b></span>`
+      : `<span class="cd">${svg('i-clock')}${fmtSec(genNextIn(it))}</span>`;
+  } else if (it.t === 'item') {
+    if (it.bub) h += `<span class="bubble"></span><span class="price">${svg('i-gem')}${bubblePrice(it)}</span>`;
+    else {
+      if (isMax(it)) h += svg('i-crown', 'crown');
+      if (wanted.has(`${it.c}-${it.l}`)) h += svg('i-check', 'chk');
+    }
   }
-  const [e, name] = def(it);
-  let h = `<span class="em" title="${name}">${e}</span><i class="lv">${it.l}</i>`;
-  if (isMax(it)) h += '<span class="crown em">👑</span>';
-  if (it.bub) h += `<i class="bolt">💎${bubblePrice(it)}</i>`;
-  return h;
+  return h + '<i class="br"></i>';
 }
 
 function renderBoard() {
   boardDirty = false;
+  const wanted = wantedSet();
   for (let i = 0; i < N; i++) {
     const it = S.board[i], d = cells[i];
-    const h = cellHtml(it);
+    const h = cellHtml(it, wanted);
     if (d.innerHTML !== h) d.innerHTML = h;
+    d.classList.toggle('empty', !it);
     d.classList.toggle('fog', !!it && it.t === 'fog');
     d.classList.toggle('gen', !!it && it.t === 'gen');
     d.classList.toggle('bub', !!it && it.t === 'item' && !!it.bub);
@@ -625,13 +781,17 @@ function renderHud() {
   $('lvl').style.setProperty('--pct', `${Math.min(100, S.xp / xpNeed(S.level) * 100).toFixed(1)}%`);
   $('lvlXp').textContent = `${S.xp}/${xpNeed(S.level)}`;
   $('energy').textContent = S.energy;
-  $('energyTimer').textContent = S.energy < ENERGY_MAX ? fmtSec(Math.max(0, Math.ceil((S.energyAt + ENERGY_SEC * 1000 - now()) / 1000))) : '';
+  const et = $('energyTimer');
+  et.textContent = S.energy < ENERGY_MAX ? fmtSec(Math.max(0, Math.ceil((S.energyAt + ENERGY_SEC * 1000 - now()) / 1000))) : '';
+  et.style.display = et.textContent ? '' : 'none';
   $('gems').textContent = S.gems;
   $('stars').textContent = S.stars;
   $('storageCnt').textContent = `${S.storage.length}/${STORAGE_MAX}`;
-  const ready = chestReady();
-  $('chestBtn').classList.toggle('ready', ready);
-  $('chestTxt').textContent = ready ? '領取' : fmtHms(Math.ceil((S.chestAt + CHEST_HOURS * 3600 * 1000 - now()) / 1000));
+  const left = chestLeft(), total = CHEST_HOURS * 3600;
+  $('chestBtn').classList.toggle('ready', left === 0);
+  $('chestTxt').textContent = left === 0 ? '領取寶箱' : fmtHms(left);
+  $('chestBar').style.width = `${((total - left) / total * 100).toFixed(1)}%`;
+  $('chestPct').textContent = left === 0 ? '可領取' : '每日寶箱';
 }
 
 function renderOrders() {
@@ -639,17 +799,26 @@ function renderOrders() {
   S.orders.forEach((o, k) => {
     if (!o) return;
     const ok = canDeliver(o);
-    const d = document.createElement('div'); d.className = 'order';
+    const d = document.createElement('div');
+    d.className = `order${ok ? ' ok' : ''}`;
+    d.title = `${o.who.n}：${o.line}`;
     d.innerHTML = `
-      <div class="who"><span class="em">${o.who.e}</span><div><b>${o.who.n}</b></div></div>
-      <div class="line">${o.line}</div>
-      <div class="needs">${o.need.map((x) => {
-        const have = Math.min(haveCount(x.c, x.l), x.q);
-        return `<div class="need${have >= x.q ? ' ok' : ''}"><span class="em">${def(item(x.c, x.l))[0]}</span><i>${x.l}</i><s>${have}/${x.q}</s></div>`;
+      <img class="av" src="${IMG}av-${o.who.av}.webp" alt="${esc(o.who.n)}">
+      <div class="rew">
+        <span>${svg('i-star', 'ico')}+${o.stars}</span>
+        ${o.gems ? `<span>${svg('i-gem', 'ico')}+${o.gems}</span>` : ''}
+        <span class="xp">XP+${o.xp}</span>
+      </div>
+      <div class="card">${o.need.map((x) => {
+        const have = Math.min(haveCount(x.c, x.l), x.q), done = have >= x.q;
+        const it = item(x.c, x.l);
+        return `<div class="need${done ? '' : ' miss'}" title="${esc(itemName(it))}"><img class="it" src="${imgOf(it)}" alt="${esc(itemName(it))}">${
+          done ? svg('i-check') : `<span class="cnt out">${have}/${x.q}</span>`}</div>`;
       }).join('')}</div>
-      <div class="reward"><span>⭐ +${o.stars}</span>${o.gems ? `<span>💎 +${o.gems}</span>` : ''}<span class="dim">XP +${o.xp}</span></div>
-      <div class="acts"><button type="button" data-deliver="${k}" ${ok ? '' : 'disabled'}>交付</button>
-      <button type="button" class="ghost skip" data-skip="${k}" title="跳過（💎1）">⏭</button></div>`;
+      <div class="acts">
+        <button type="button" class="btnGo" data-deliver="${k}" ${ok ? '' : 'disabled'}>交付</button>
+        <button type="button" class="btnSkip" data-skip="${k}" aria-label="跳過訂單（花 1 顆寶石）" title="跳過（1 顆寶石）"><svg width="18" height="18"><use href="#i-skip"></use></svg></button>
+      </div>`;
     el.appendChild(d);
   });
 }
@@ -658,33 +827,37 @@ function renderInfo() {
   const el = $('info');
   const it = sel != null ? S.board[sel] : null;
   if (it == null) {
-    el.innerHTML = `<b>密室合成</b><p>拖曳兩個相同道具合成更高等級；點產生器產出道具；完成上方訂單賺 ⭐ 與經驗。</p>`;
+    el.innerHTML = `<div class="txt"><div class="ttl"><i>i</i><b>密室合成</b></div>
+      <p>拖兩個相同道具合成升級；點產生器產出道具；完成上方訂單賺星星。</p></div>`;
     return;
   }
-  let title = '', desc = '', acts = '';
-  if (it.t === 'fog') { title = '蛛網'; desc = '在相鄰格完成一次合成即可清除，底下可能藏著東西。'; }
-  else if (it.t === 'box') { title = '神秘箱'; desc = '點一下打開，隨機獲得一個道具。'; acts = `<button type="button" data-act="open">打開</button><button type="button" class="ghost" data-act="store">收納</button>`; }
-  else if (it.t === 'gen') {
+  let title = nameOf(it), desc = '', acts = '', sellBtn = '';
+  if (it.t === 'fog') desc = '在相鄰格完成一次合成就能清掉，底下可能藏著東西。';
+  else if (it.t === 'box') {
+    desc = '點一下打開，隨機獲得一個道具。';
+    acts = `<button type="button" class="mini go" data-act="open">打開</button><button type="button" class="mini" data-act="store">收納</button>`;
+  } else if (it.t === 'gen') {
     const G = GENS[it.k];
-    title = G.n;
-    desc = it.ch > 0 ? `點一下消耗 1⚡ 產出道具。剩 ${it.ch}/${G.max} 次，每 ${G.regen} 秒回復 1 次。`
+    desc = it.ch > 0 ? `點一下花 1 能量產出道具。剩 ${it.ch}/${G.max} 次，每 ${G.regen} 秒回 1 次。`
                      : `補貨中，${fmtSec(genNextIn(it))} 後回復 1 次。`;
-    acts = `<button type="button" data-act="spawn" ${it.ch > 0 ? '' : 'disabled'}>產出（1⚡）</button>`;
+    acts = `<button type="button" class="mini go" data-act="spawn" ${it.ch > 0 ? '' : 'disabled'}>產出（1 能量）</button>`;
   } else {
-    const [e, name] = def(it), ch = CHAINS[it.c];
-    title = `${name}（等級 ${it.l}）`;
+    const ch = CHAINS[it.c];
+    title = `${itemName(it)}（等級 ${it.l}）`;
     if (it.bub) {
-      desc = `泡泡裡的 ${name}，花 💎${bubblePrice(it)} 買下，否則 ${fmtSec(Math.max(0, Math.ceil((it.bub - now()) / 1000)))} 後消失。`;
-      acts = `<button type="button" data-act="buy">購買 💎${bubblePrice(it)}</button>`;
+      desc = `泡泡裡的${itemName(it)}，${fmtSec(Math.max(0, Math.ceil((it.bub - now()) / 1000)))} 後消失。`;
+      acts = `<button type="button" class="mini go" data-act="buy">購買 ${bubblePrice(it)} 寶石</button>`;
     } else if (ch.collect) {
-      desc = `點一下收取 +${ch.values[it.l - 1]} ${e}${isMax(it) ? '' : '，也可以兩個合成成更大的。'}`;
-      acts = `<button type="button" data-act="collect">收取</button>`;
+      desc = `點一下收取 +${ch.values[it.l - 1]}${isMax(it) ? '。' : '，兩個也能合成更大的。'}`;
+      acts = `<button type="button" class="mini go" data-act="collect">收取</button>`;
     } else {
       desc = isMax(it) ? '已達最高等級，可交付訂單或出售。' : '合成後晉升至下一等級。';
-      acts = `<button type="button" class="ghost" data-act="sell">出售 ${sellValue(it)}⭐</button><button type="button" class="ghost" data-act="store">收納</button>`;
+      acts = `<button type="button" class="mini" data-act="store">收納</button>`;
+      sellBtn = `<button type="button" class="sell" data-act="sell">出售<span>${sellValue(it)}${svg('i-star')}</span></button>`;
     }
   }
-  el.innerHTML = `<b>${title}</b><p>${desc}</p><div class="acts">${acts}</div>`;
+  el.innerHTML = `<div class="txt"><div class="ttl"><i>i</i><b>${esc(title)}</b></div><p>${desc}</p>${
+    acts ? `<div class="acts">${acts}</div>` : ''}</div>${sellBtn}`;
 }
 
 function render() { renderHud(); renderOrders(); renderBoard(); renderInfo(); }
@@ -709,37 +882,42 @@ function openModal(html) { $('sheet').innerHTML = html; $('modal').classList.add
 function closeModal() { $('modal').classList.remove('show'); }
 
 function openShop() {
-  openModal(`<h2>🛒 商店</h2>
-    ${OFFERS.map((o, k) => `<div class="offer"><span class="em">${o.e}</span><div><b>${o.b}</b><span>${o.s}</span></div><button type="button" data-offer="${k}">購買</button></div>`).join('')}
-    <p>能量每 ${ENERGY_SEC} 秒自動回 1 點（上限 ${ENERGY_MAX}）。每日寶箱每 ${CHEST_HOURS} 小時可領一次。</p>
-    <p>統計：合成 ${S.stats.merges} 次、完成訂單 ${S.stats.orders} 張、產出道具 ${S.stats.spawns} 個。</p>
-    <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="ghost" data-close style="flex:1">關閉</button>
-    <button type="button" class="danger" data-reset>重置進度</button></div>`);
+  openModal(`<h2><img src="${IMG}gen-cart.webp" alt="">商店</h2>
+    ${OFFERS.map((o, k) => `<div class="offer"><img class="it" src="${IMG}${o.img}.webp" alt=""><div><b>${o.b}</b><span>${o.s}</span></div><button type="button" class="big" data-offer="${k}">購買</button></div>`).join('')}
+    <p>能量每 ${ENERGY_SEC} 秒自動回 1 點，上限 ${ENERGY_MAX}。每日寶箱每 ${CHEST_HOURS} 小時可領一次。</p>
+    <div class="row"><button type="button" class="big gray" data-close>關閉</button></div>`);
+}
+
+function openMenu() {
+  openModal(`<h2><img src="${IMG}clue-6.webp" alt="">選單</h2>
+    <p>目前等級 ${S.level}，已合成 ${S.stats.merges} 次、完成訂單 ${S.stats.orders} 張、產出道具 ${S.stats.spawns} 個。</p>
+    <div class="row"><button type="button" class="big" data-tut>遊戲說明</button><button type="button" class="big gray" data-close>關閉</button></div>
+    <div class="row"><button type="button" class="big red" data-reset>重置進度</button></div>`);
 }
 
 function openStorage() {
   const slots = [];
   for (let k = 0; k < STORAGE_MAX; k++) {
     const it = S.storage[k];
-    slots.push(it ? `<div class="slot" data-take="${k}">${it.t === 'box' ? '<span class="em">🎁</span>' : `<span class="em">${def(it)[0]}</span><i class="lv">${it.l}</i>`}</div>`
+    slots.push(it ? `<button type="button" class="slot" data-take="${k}" aria-label="${esc(nameOf(it))}"><img class="it" src="${imgOf(it)}" alt=""></button>`
                   : '<div class="slot empty"></div>');
   }
-  openModal(`<h2>🧳 收納箱 ${S.storage.length}/${STORAGE_MAX}</h2>
-    <p>點棋盤上的道具 → 「收納」可暫放；點這裡的道具放回棋盤。</p>
+  openModal(`<h2><img src="${IMG}gen-closet.webp" alt="">收納箱 ${S.storage.length}/${STORAGE_MAX}</h2>
+    <p>點棋盤上的道具，再按「收納」可暫放；點這裡的道具放回棋盤。</p>
     <div class="slots">${slots.join('')}</div>
-    <button type="button" class="ghost" data-close style="width:100%">關閉</button>`);
+    <div class="row"><button type="button" class="big gray" data-close>關閉</button></div>`);
 }
 
 function openTutorial() {
-  openModal(`<h2>🔐 密室合成</h2>
+  openModal(`<h2><img src="${IMG}lock-3.webp" alt="">密室合成</h2>
     <ul class="tut">
-      <li><span class="em">🗄️</span> 點 <b>道具櫃</b>、<b>工具推車</b> 花 1⚡ 產出道具，能量每分鐘回 1 點。</li>
-      <li><span class="em">🔑</span> 把兩個<b>相同道具</b>拖在一起就合成更高等級；一次湊到 5 個會多送一個。</li>
-      <li><span class="em">🕸️</span> 在蛛網旁邊合成可以清掉蛛網，底下藏著更多產生器。</li>
-      <li><span class="em">📋</span> 上方是店長與玩家的<b>訂單</b>，交付可賺 ⭐ 與經驗，升級拿 💎 與神秘箱。</li>
-      <li><span class="em">🫧</span> 合成偶爾會冒出<b>泡泡</b>，花 💎 可買下裡面的道具。</li>
+      <li><img src="${IMG}gen-cabinet.webp" alt="">點<b>道具櫃</b>、<b>工具推車</b>花 1 能量產出道具，能量每分鐘回 1 點。</li>
+      <li><img src="${IMG}lock-1.webp" alt="">把兩個<b>相同道具</b>拖在一起就會合成更高等級；一次湊到 5 個會多送一個。</li>
+      <li><img src="${IMG}spook-2.webp" alt="">在灰色蛛網格旁邊合成可以清掉蛛網，底下還藏著兩台產生器。</li>
+      <li><img src="${IMG}av-manager.webp" alt="">上方是店長和玩家的<b>訂單</b>，綠色打勾代表棋盤上已經有，交付可賺星星和經驗。</li>
+      <li><img src="${IMG}gem-1.webp" alt="">合成偶爾會冒出<b>泡泡</b>，花寶石可以買下裡面的道具。</li>
     </ul>
-    <button type="button" data-close style="width:100%">開始</button>`);
+    <div class="row"><button type="button" class="big" data-close>開始</button></div>`);
   S.seenTut = true; save();
 }
 
@@ -778,8 +956,7 @@ document.addEventListener('pointermove', (e) => {
     if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 8) return;
     if (!drag.movable) return;
     drag.moved = true;
-    const it = S.board[drag.i];
-    ghost.textContent = it.t === 'gen' ? GENS[it.k].e : it.t === 'box' ? '🎁' : def(it)[0];
+    ghost.src = imgOf(S.board[drag.i]);
     ghost.classList.add('on');
     cells[drag.i].classList.add('src');
   }
@@ -813,6 +990,7 @@ $('orders').addEventListener('click', (e) => {
 });
 $('chestBtn').addEventListener('click', claimChest);
 $('shopBtn').addEventListener('click', openShop);
+$('menuBtn').addEventListener('click', openMenu);
 $('storageBtn').addEventListener('click', openStorage);
 $('resEnergy').addEventListener('click', openShop);
 $('resGems').addEventListener('click', openShop);
@@ -822,6 +1000,7 @@ $('modal').addEventListener('click', (e) => {
   if (offer) { OFFERS[+offer.dataset.offer].fn(); afterChange(); openShop(); return; }
   const take = e.target.closest('[data-take]');
   if (take) return fromStorage(+take.dataset.take);
+  if (e.target.closest('[data-tut]')) return openTutorial();
   if (e.target.closest('[data-reset]')) {
     if (confirm('確定要清除所有進度、從頭開始？')) { S = freshState(); sel = null; closeModal(); afterChange(); openTutorial(); }
   }
@@ -844,7 +1023,7 @@ setInterval(tick, 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 
 // 測試 / 除錯用（瀏覽器主控台可呼叫）
-window.__merge = { get S() { return S; }, set S(v) { S = v; }, drop, tap, spawnFrom, deliver, sell, undoSell, tick, render, afterChange, freshState, save, load, CHAINS, GENS, N, COLS, ROWS };
+window.__merge = { get S() { return S; }, set S(v) { S = v; }, drop, tap, spawnFrom, deliver, sell, undoSell, tick, render, afterChange, freshState, save, load, imgOf, CHAINS, GENS, PEOPLE, N, COLS, ROWS };
 </script>
 </body>
 </html>
