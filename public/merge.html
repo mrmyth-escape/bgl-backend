@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#12100f">
+<title>密室合成 — 勃根地密室</title>
+<style>
+  :root{
+    --bg:#12100f; --card:#1c1917; --line:#332e2b; --ink:#f5f1ed; --dim:#a09892;
+    --accent:#c9a227; --ok:#3fa66a; --bad:#d9534f; --warn:#d99a2b;
+    --cell:#2a2522; --cell2:#241f1c; --fog:#15120f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 -apple-system,"PingFang TC","Noto Sans TC",sans-serif;overscroll-behavior:none}
+  body{padding-bottom:calc(132px + env(safe-area-inset-bottom))}
+  .app{max-width:520px;margin:0 auto;padding:10px 12px 0}
+  .em{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;line-height:1}
+
+  /* ---------- HUD ---------- */
+  .hud{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .lvl{width:52px;height:52px;border-radius:50%;flex:none;position:relative;
+       background:conic-gradient(var(--accent) var(--pct,0%),#3a3330 0);display:grid;place-items:center}
+  .lvl::before{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--card)}
+  .lvl b{position:relative;font-size:18px}
+  .lvl small{position:absolute;bottom:-14px;left:0;right:0;text-align:center;font-size:10px;color:var(--dim)}
+  .res{flex:1;display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);
+       border-radius:20px;padding:6px 10px;min-width:0;position:relative}
+  .res .em{font-size:18px}
+  .res b{font-variant-numeric:tabular-nums;font-size:15px}
+  .res small{position:absolute;left:0;right:0;bottom:-15px;text-align:center;font-size:10px;color:var(--warn)}
+  .res.plus::after{content:"＋";margin-left:auto;color:var(--accent);font-weight:700}
+  .chest{flex:none;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);
+         padding:4px 8px;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1}
+  .chest .em{font-size:22px}
+  .chest small{font-size:10px;color:var(--dim);margin-top:3px}
+  .chest.ready{border-color:var(--accent);box-shadow:0 0 0 2px #c9a22744;animation:bounce 1.2s infinite}
+  .chest.ready small{color:var(--accent);font-weight:700}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+  /* ---------- 訂單 ---------- */
+  .orders{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0 10px}
+  .order{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px}
+  .order .who{display:flex;align-items:center;gap:6px;font-size:13px}
+  .order .who .em{font-size:24px}
+  .order .who b{display:block;font-size:13px}
+  .order .who span{font-size:11px;color:var(--dim);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .order .line{font-size:11px;color:var(--dim);line-height:1.3;min-height:28px}
+  .needs{display:flex;gap:6px;flex-wrap:wrap}
+  .need{position:relative;width:44px;height:44px;border-radius:9px;background:var(--cell);display:grid;place-items:center}
+  .need .em{font-size:24px}
+  .need i{position:absolute;left:2px;top:1px;font-size:9px;font-style:normal;color:var(--dim)}
+  .need s{position:absolute;right:2px;bottom:1px;font-size:10px;text-decoration:none;color:var(--dim);font-variant-numeric:tabular-nums}
+  .need.ok{outline:2px solid var(--ok)} .need.ok s{color:var(--ok)}
+  .order .reward{font-size:12px;color:var(--accent);display:flex;gap:8px}
+  .order .acts{display:flex;gap:6px}
+  .order button{flex:1;padding:8px 4px;font-size:13px}
+  .order button.skip{flex:0 0 auto;padding:8px}
+
+  button{background:var(--accent);color:#1a1512;border:0;border-radius:8px;
+         padding:10px 14px;font:600 14px/1 inherit;cursor:pointer}
+  button.ghost{background:transparent;color:var(--dim);border:1px solid var(--line)}
+  button.danger{background:var(--bad);color:#fff}
+  button:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ---------- 棋盤 ---------- */
+  .board{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;touch-action:none;user-select:none;
+         background:#0d0b0a;border:1px solid var(--line);border-radius:14px;padding:6px}
+  .cell{aspect-ratio:1;border-radius:9px;background:var(--cell);position:relative;display:grid;place-items:center;
+        cursor:pointer;transition:transform .08s}
+  .cell:nth-child(odd){background:var(--cell2)}
+  .cell .em{font-size:clamp(22px,7vw,38px);pointer-events:none}
+  .cell.sel{outline:2px solid var(--ink);outline-offset:-2px}
+  .cell.over{outline:2px solid var(--accent);outline-offset:-2px;transform:scale(1.06)}
+  .cell.src .em{opacity:.25}
+  .cell.fog{background:var(--fog)}
+  .cell.fog .em{opacity:.5;font-size:clamp(18px,5vw,28px)}
+  .cell .lv{position:absolute;left:3px;top:2px;font-size:10px;font-style:normal;color:var(--dim);
+            background:#0008;border-radius:4px;padding:0 3px;pointer-events:none}
+  .cell .crown{position:absolute;left:1px;bottom:1px;font-size:13px;pointer-events:none}
+  .cell .bolt{position:absolute;right:2px;bottom:1px;font-size:10px;font-style:normal;color:#ffd84a;
+              background:#0009;border-radius:4px;padding:0 3px;pointer-events:none;font-variant-numeric:tabular-nums}
+  .cell .bolt.cd{color:var(--dim)}
+  .cell.gen{background:#2f2823;box-shadow:inset 0 0 0 1px #5a4a2a}
+  .cell.bub{background:radial-gradient(circle at 35% 30%,#ffffff22,#7fd3ff33 55%,#ff9ff333);
+            box-shadow:inset 0 0 0 2px #9fe4ff88}
+  .cell.bub .bolt{color:#9fe4ff}
+  .cell.pop{animation:pop .3s}
+  .cell.shake{animation:shake .25s}
+  @keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}30%{transform:translateX(-4px)}60%{transform:translateX(4px)}}
+  .dragghost{position:fixed;left:0;top:0;pointer-events:none;z-index:50;font-size:42px;transform:translate(-50%,-50%);
+         filter:drop-shadow(0 6px 10px #000c);display:none}
+  .dragghost.on{display:block}
+
+  /* ---------- 底部 ---------- */
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#12100fee;backdrop-filter:blur(8px);
+       border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  .bar .in{max-width:520px;margin:0 auto;display:flex;gap:8px;align-items:stretch}
+  .sq{flex:none;width:58px;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
+  .sq .em{font-size:24px}
+  .sq small{font-size:10px;color:var(--dim)}
+  .info{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0;min-height:72px}
+  .info b{font-size:14px;display:block}
+  .info p{margin:2px 0 6px;font-size:12px;color:var(--dim);line-height:1.35}
+  .info .acts{display:flex;gap:6px;flex-wrap:wrap}
+  .info .acts button{padding:7px 10px;font-size:12px}
+
+  /* ---------- 提示 / 視窗 ---------- */
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));
+         max-width:min(92vw,480px);padding:10px 14px;border-radius:10px;font-size:14px;z-index:60;display:none;
+         background:#2a2522;border:1px solid var(--line);box-shadow:0 8px 24px #000a;align-items:center;gap:10px}
+  .toast.show{display:flex}
+  .toast.e{background:#4a1f1e;border-color:var(--bad)}
+  .toast.s{background:#1c3a2a;border-color:var(--ok)}
+  .toast button{padding:6px 10px;font-size:12px}
+  .modal{position:fixed;inset:0;background:#000a;z-index:70;display:none;align-items:flex-end;justify-content:center}
+  .modal.show{display:flex}
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px 16px 0 0;width:100%;max-width:520px;
+         padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:80vh;overflow:auto}
+  .sheet h2{margin:0 0 10px;font-size:16px;color:var(--accent)}
+  .sheet p{color:var(--dim);font-size:13px;margin:6px 0}
+  .offer{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+  .offer .em{font-size:28px}
+  .offer div{flex:1} .offer b{display:block;font-size:14px} .offer span{font-size:12px;color:var(--dim)}
+  .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+  .slot{aspect-ratio:1;border-radius:9px;background:var(--cell);display:grid;place-items:center;position:relative;cursor:pointer}
+  .slot .em{font-size:28px} .slot .lv{position:absolute;left:3px;top:2px;font-size:10px;color:var(--dim)}
+  .slot.empty{background:#15120f;border:1px dashed var(--line)}
+  .tut li{margin-bottom:8px;font-size:14px}
+  .tut .em{font-size:18px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hud">
+    <div class="lvl" id="lvl"><b id="lvlNum">1</b><small id="lvlXp"></small></div>
+    <div class="res plus" id="resEnergy"><span class="em">⚡</span><b id="energy">0</b><small id="energyTimer"></small></div>
+    <div class="res plus" id="resGems"><span class="em">💎</span><b id="gems">0</b></div>
+    <div class="res"><span class="em">⭐</span><b id="stars">0</b></div>
+    <button class="chest" id="chestBtn" type="button"><span class="em">📦</span><small id="chestTxt">—</small></button>
+  </header>
+
+  <section class="orders" id="orders"></section>
+  <section><div class="board" id="board"></div></section>
+</div>
+
+<footer class="bar"><div class="in">
+  <button class="sq" id="storageBtn" type="button"><span class="em">🧳</span><small id="storageCnt">0/10</small></button>
+  <div class="info" id="info"></div>
+  <button class="sq" id="shopBtn" type="button"><span class="em">🛒</span><small>商店</small></button>
+</div></footer>
+
+<div class="dragghost em" id="ghost"></div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+
+<script>
+/* =====================================================================
+ * 密室合成 —— 勃根地密室版「合成遊戲」
+ * 單一 HTML 檔，不需建置；進度存在瀏覽器 localStorage。
+ * ===================================================================== */
+'use strict';
+
+const COLS = 7, ROWS = 9, N = COLS * ROWS;
+const ENERGY_MAX = 100, ENERGY_SEC = 60;      // 每 60 秒回 1 點能量
+const STORAGE_MAX = 10;
+const CHEST_HOURS = 20;
+const BUBBLE_SEC = 90, BUBBLE_CHANCE = 0.1;
+const SELL = [1, 3, 8, 20, 50, 120, 300];     // 依等級出售價（⭐）
+const SAVE_KEY = 'bgl-merge-v1';
+
+/* ---------- 合成鏈 ---------- */
+const CHAINS = {
+  clue : { name:'線索', items:[['📄','紙條'],['📜','卷軸'],['📖','筆記本'],['🗺️','藏寶圖'],['📚','古籍'],['🔮','水晶球']] },
+  lock : { name:'鎖具', items:[['🔑','小鑰匙'],['🔒','掛鎖'],['🔐','密碼鎖'],['🗝️','古董鑰匙'],['⛓️','鎖鏈機關'],['🚪','密門']] },
+  tool : { name:'工具', items:[['🔦','手電筒'],['🔧','扳手'],['🔨','鐵鎚'],['🧲','磁鐵'],['🧰','工具箱'],['⚙️','機關核心']] },
+  elec : { name:'弱電', items:[['🔋','電池'],['🔌','電線'],['💡','燈泡'],['📟','感應器'],['🎛️','控制盒'],['🖥️','主控機']] },
+  spook: { name:'驚嚇', items:[['🕷️','蜘蛛'],['🕸️','蛛網'],['🎭','面具'],['💀','骷髏'],['👻','幽靈'],['🧟','殭屍']] },
+  snack: { name:'補給', items:[['☕','咖啡'],['🍙','飯糰'],['🍱','便當'],['🍰','蛋糕'],['🎂','慶功蛋糕']] },
+  star  : { name:'星星', collect:'stars',  values:[1, 5, 20],  items:[['⭐','星星'],['🌟','大星星'],['✨','星星堆']] },
+  gem   : { name:'寶石', collect:'gems',   values:[1, 5],      items:[['💎','寶石'],['💠','寶石簇']] },
+  energy: { name:'能量', collect:'energy', values:[5, 15],     items:[['⚡','能量飲'],['🌩️','能量桶']] },
+};
+const ORDER_CHAINS = ['clue', 'lock', 'tool', 'elec', 'spook', 'snack'];
+
+/* ---------- 產生器：點一下花 1⚡ 產出道具 ---------- */
+const GENS = {
+  cabinet: { e:'🗄️', n:'道具櫃',   max:10, regen:30, table:[['clue',1,40],['lock',1,35],['clue',2,9],['lock',2,8],['star',1,5],['energy',1,3]] },
+  cart   : { e:'🛒', n:'工具推車', max:10, regen:30, table:[['tool',1,40],['elec',1,35],['tool',2,9],['elec',2,8],['star',1,5],['gem',1,3]] },
+  closet : { e:'🧳', n:'驚嚇道具箱', max:8, regen:40, table:[['spook',1,55],['spook',2,25],['box',0,5],['star',1,10],['energy',1,5]] },
+  fridge : { e:'🧊', n:'員工冰箱', max:8, regen:40, table:[['snack',1,60],['snack',2,25],['star',1,10],['gem',1,5]] },
+};
+
+/* ---------- 訂單角色 ---------- */
+const PEOPLE = [
+  { e:'👩‍💼', n:'店長 小雅',   lines:['新主題下週開幕，幫我準備{item}！','巡場發現少了{item}，快補上。'] },
+  { e:'🧑‍🔧', n:'弱電 阿宏',   lines:['機關接線卡住了，需要{item}。','這關的感應要重做，給我{item}。'] },
+  { e:'🧑‍🎨', n:'美術 小米',   lines:['場景想加點氣氛，{item}可以嗎？','道具太新了，{item}拿來做舊一下。'] },
+  { e:'🧔',   n:'木工 大熊',   lines:['密門框量好了，缺{item}。','今天釘到手軟，{item}救我。'] },
+  { e:'🧑‍💻', n:'策劃 阿傑',   lines:['劇情線需要一個{item}當關鍵。','謎題測試卡關，{item}應該能解。'] },
+  { e:'🕵️',   n:'玩家 偵探哥', lines:['我確定這間房藏著{item}。','破關紀念想要{item}！'] },
+  { e:'👩‍🎓', n:'玩家 學生妹', lines:['第一次玩密室，{item}好可愛想要。','包場慶生，想要{item}當佈置。'] },
+  { e:'👨‍👩‍👧', n:'家庭客',  lines:['小朋友吵著要{item}。','全家一起破關，{item}當獎品。'] },
+];
+
+/* =====================================================================
+ * 狀態
+ * ===================================================================== */
+let S = null;                  // 存檔狀態
+let sel = null;                // 選取中的格子
+let drag = null;               // 拖曳中
+let lastSold = null;           // 復原出售用
+let boardDirty = true;
+
+const $ = (id) => document.getElementById(id);
+const now = () => Date.now();
+const rnd = (n) => Math.floor(Math.random() * n);
+const pick = (arr) => arr[rnd(arr.length)];
+const rc = (i) => [Math.floor(i / COLS), i % COLS];
+const idx = (r, c) => r * COLS + c;
+
+function item(c, l, extra) { return Object.assign({ t:'item', c, l }, extra || {}); }
+function gen(k)  { return { t:'gen', k, ch: GENS[k].max, at: now() }; }
+function box()   { return { t:'box' }; }
+function fog(inner) { return { t:'fog', inner: inner || null }; }
+
+function maxLevel(c) { return CHAINS[c].items.length; }
+function def(it)     { return CHAINS[it.c].items[it.l - 1]; }           // [emoji, name]
+function isMax(it)   { return it.t === 'item' && it.l >= maxLevel(it.c); }
+function sellValue(it) { return SELL[Math.min(it.l, SELL.length) - 1]; }
+function isCollect(it) { return it.t === 'item' && !!CHAINS[it.c].collect; }
+function isMovable(it) { return it && it.t !== 'fog' && !(it.t === 'item' && it.bub); }
+
+function xpNeed(level) { return Math.round(30 * Math.pow(level, 1.35)); }
+function orderCap()    { return Math.min(6, 2 + Math.floor((S.level - 1) / 2)); }
+
+/* ---------- 初始棋盤 ---------- */
+function freshBoard() {
+  const b = new Array(N).fill(null);
+  const put = (r, c, v) => { b[idx(r, c)] = v; };
+  put(2, 2, gen('cabinet'));
+  put(2, 4, gen('cart'));
+  put(0, 0, item('clue', 1)); put(0, 1, item('clue', 1)); put(0, 5, item('lock', 1));
+  put(1, 3, item('lock', 1)); put(1, 6, item('tool', 1));
+  put(3, 0, item('elec', 1)); put(3, 1, item('elec', 1)); put(3, 5, item('tool', 1));
+  put(4, 3, item('star', 1)); put(4, 6, item('clue', 2));
+  put(5, 0, box());          put(5, 4, item('energy', 1));
+  // 下方三列被蛛網蓋住：在相鄰格合成就會清掉
+  const hidden = [
+    gen('closet'), gen('fridge'), box(), item('spook', 1), item('spook', 1), item('snack', 1),
+    item('star', 2), item('lock', 2), item('tool', 2), item('elec', 2), item('clue', 3), item('gem', 1),
+  ];
+  for (let r = 6; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const inner = Math.random() < 0.6 && hidden.length ? hidden.splice(rnd(hidden.length), 1)[0] : null;
+    put(r, c, fog(inner));
+  }
+  // 保證產生器一定在蛛網底下
+  for (const g of hidden.filter((h) => h.t === 'gen')) {
+    const free = [...Array(N).keys()].filter((i) => b[i] && b[i].t === 'fog' && !b[i].inner);
+    if (free.length) b[pick(free)].inner = g;
+  }
+  return b;
+}
+
+function freshState() {
+  return {
+    v: 1, board: freshBoard(), level: 1, xp: 0,
+    energy: ENERGY_MAX, energyAt: now(), gems: 10, stars: 50,
+    orders: [null, null], orderSeq: 0, storage: [], chestAt: 0,
+    seenTut: false, stats: { merges: 0, orders: 0, spawns: 0 },
+  };
+}
+
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (_) {} }
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) { const s = JSON.parse(raw); if (s && s.v === 1 && Array.isArray(s.board) && s.board.length === N) return s; }
+  } catch (_) {}
+  return null;
+}
+
+/* =====================================================================
+ * 核心規則
+ * ===================================================================== */
+function emptyCells() { const out = []; for (let i = 0; i < N; i++) if (!S.board[i]) out.push(i); return out; }
+
+function nearestEmpty(from) {
+  const cells = emptyCells();
+  if (!cells.length) return -1;
+  const [r0, c0] = rc(from);
+  let best = -1, bd = Infinity;
+  for (const i of cells) {
+    const [r, c] = rc(i);
+    const d = Math.hypot(r - r0, c - c0) + Math.random() * 0.5;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+
+function placeNew(it, from) {
+  const i = nearestEmpty(from == null ? Math.floor(N / 2) : from);
+  if (i < 0) return -1;
+  S.board[i] = it;
+  animate(i, 'pop');
+  return i;
+}
+
+function weighted(table) {
+  const total = table.reduce((s, t) => s + t[2], 0);
+  let r = Math.random() * total;
+  for (const t of table) { r -= t[2]; if (r <= 0) return t; }
+  return table[table.length - 1];
+}
+
+function addXp(n) {
+  S.xp += n;
+  while (S.xp >= xpNeed(S.level)) {
+    S.xp -= xpNeed(S.level);
+    S.level++;
+    S.energy += 15; S.gems += 2;
+    const i = placeNew(box());
+    toast(`🎉 升級到 Lv.${S.level}！獲得 ⚡15、💎2${i >= 0 ? '、🎁 神秘箱' : ''}`, 's', 3500);
+  }
+}
+
+function clearFogAround(i) {
+  const [r, c] = rc(i);
+  for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const rr = r + dr, cc = c + dc;
+    if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) continue;
+    const j = idx(rr, cc), cell = S.board[j];
+    if (cell && cell.t === 'fog') { S.board[j] = cell.inner; animate(j, 'pop'); }
+  }
+}
+
+function sameItem(a, b) { return a && b && a.t === 'item' && b.t === 'item' && a.c === b.c && a.l === b.l && !a.bub && !b.bub; }
+
+/** 由 dst 出發、4 方向連通的相同物品（不含 exclude） */
+function group(dst, exclude) {
+  const base = S.board[dst], seen = new Set([dst]), q = [dst];
+  while (q.length) {
+    const i = q.shift(); const [r, c] = rc(i);
+    for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const rr = r + dr, cc = c + dc;
+      if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) continue;
+      const j = idx(rr, cc);
+      if (j === exclude || seen.has(j) || !sameItem(base, S.board[j])) continue;
+      seen.add(j); q.push(j);
+    }
+  }
+  return [...seen];
+}
+
+/** 把 src 拖到 dst：移動 / 合成 / 交換 */
+function drop(src, dst) {
+  if (src === dst) return false;
+  const a = S.board[src], b = S.board[dst];
+  if (!isMovable(a)) return false;
+  if (b && b.t === 'fog') { animate(dst, 'shake'); return false; }
+
+  if (!b) {                                       // 移動
+    S.board[dst] = a; S.board[src] = null;
+  } else if (sameItem(a, b) && !isMax(a)) {       // 合成
+    const next = item(a.c, a.l + 1);
+    const g = group(dst, src);
+    let produced = 1;
+    S.board[src] = null;
+    if (g.length + 1 >= 5) {                      // 五合一送二
+      const consume = g.slice(0, 4);
+      for (const i of consume) S.board[i] = null;
+      S.board[dst] = next;
+      const other = consume.find((i) => i !== dst);
+      S.board[other] = item(a.c, a.l + 1);
+      animate(other, 'pop');
+      produced = 2;
+      toast('✨ 五合一：多送一個！', 's');
+    } else {
+      S.board[dst] = next;
+    }
+    animate(dst, 'pop');
+    S.stats.merges++;
+    clearFogAround(dst);
+    addXp(next.l * 2 * produced);
+    if (!CHAINS[a.c].collect && Math.random() < BUBBLE_CHANCE) {
+      const i = placeNew(item(a.c, a.l + 1, { bub: now() + BUBBLE_SEC * 1000 }), dst);
+      if (i >= 0) toast(`🫧 出現泡泡！花 💎${bubblePrice(S.board[i])} 可買下 ${def(S.board[i])[1]}`, '', 3000);
+    }
+    if (isMax(next)) toast(`👑 ${def(next)[1]} 已是最高等級！`, 's');
+  } else {                                        // 交換
+    if (!isMovable(b)) { animate(dst, 'shake'); return false; }
+    S.board[dst] = a; S.board[src] = b;
+  }
+  sel = null;
+  afterChange();
+  return true;
+}
+
+function bubblePrice(it) { return Math.max(1, it.l); }
+
+function spawnFrom(i) {
+  const g = S.board[i], G = GENS[g.k];
+  if (g.ch <= 0) { toast(`${G.n} 正在補貨，${fmtSec(genNextIn(g))} 後回復`, 'e'); return false; }
+  if (S.energy <= 0) { toast('⚡ 能量不足，到商店補充或等待回復', 'e'); openShop(); return false; }
+  if (!emptyCells().length) { toast('棋盤已滿，先合成或出售一些道具', 'e'); return false; }
+  const [c, l] = weighted(G.table);
+  const it = c === 'box' ? box() : item(c, l);
+  if (g.ch === G.max) g.at = now();
+  g.ch--; S.energy--; S.stats.spawns++;
+  if (S.energy < ENERGY_MAX && S.energyAt > now()) S.energyAt = now();
+  placeNew(it, i);
+  afterChange();
+  return true;
+}
+
+function genNextIn(g) { return Math.max(0, Math.ceil((g.at + GENS[g.k].regen * 1000 - now()) / 1000)); }
+
+function openBox(i) {
+  const chains = ORDER_CHAINS;
+  const roll = Math.random();
+  const c = pick(chains);
+  const l = roll < 0.55 ? 1 : roll < 0.85 ? 2 : roll < 0.97 ? 3 : 4;
+  const it = Math.random() < 0.12 ? item(pick(['star', 'gem', 'energy']), 1) : item(c, Math.min(l, maxLevel(c)));
+  S.board[i] = it;
+  animate(i, 'pop');
+  toast(`🎁 開出 ${def(it)[0]} ${def(it)[1]}`, 's');
+  afterChange();
+}
+
+function collect(i) {
+  const it = S.board[i], ch = CHAINS[it.c], v = ch.values[it.l - 1];
+  S[ch.collect] += v;
+  S.board[i] = null;
+  toast(`+${v} ${def(it)[0]}`, 's', 1200);
+  afterChange();
+}
+
+function buyBubble(i) {
+  const it = S.board[i], p = bubblePrice(it);
+  if (S.gems < p) { toast(`💎 不足，需要 ${p} 顆`, 'e'); return; }
+  S.gems -= p; delete it.bub;
+  animate(i, 'pop');
+  toast(`買下 ${def(it)[1]}`, 's');
+  afterChange();
+}
+
+function sell(i) {
+  const it = S.board[i], v = sellValue(it);
+  S.board[i] = null; S.stars += v; sel = null;
+  lastSold = { i, it, v };
+  afterChange();
+  toast(`出售 ${def(it)[1]} +${v}⭐`, '', 5000, { label:'復原', fn: undoSell });
+}
+function undoSell() {
+  if (!lastSold) return;
+  const { i, it, v } = lastSold; lastSold = null;
+  if (S.board[i]) { toast('原位置已被佔用，無法復原', 'e'); return; }
+  if (S.stars < v) { toast('星星不夠退回，無法復原', 'e'); return; }
+  S.board[i] = it; S.stars -= v;
+  hideToast(); afterChange();
+}
+
+function toStorage(i) {
+  if (S.storage.length >= STORAGE_MAX) { toast('收納箱已滿', 'e'); return; }
+  S.storage.push(S.board[i]); S.board[i] = null; sel = null;
+  afterChange();
+}
+function fromStorage(k) {
+  const it = S.storage[k];
+  const i = placeNew(it);
+  if (i < 0) { toast('棋盤已滿', 'e'); return; }
+  S.storage.splice(k, 1);
+  closeModal(); afterChange();
+}
+
+/* ---------- 訂單 ---------- */
+function newOrder() {
+  const cap = orderCap();
+  const want = Math.random() < 0.6 ? 1 : 2;
+  const need = [];
+  for (let k = 0; k < want; k++) {
+    const c = pick(ORDER_CHAINS);
+    const top = Math.min(cap, maxLevel(c));
+    const l = 1 + Math.floor(Math.pow(Math.random(), 0.8) * top);   // 偏中低等級
+    const q = l <= 2 && Math.random() < 0.25 ? 2 : 1;
+    const dup = need.find((x) => x.c === c && x.l === l);
+    if (dup) dup.q += q; else need.push({ c, l, q });
+  }
+  const stars = need.reduce((s, x) => s + x.q * SELL[x.l - 1] * 3, 0);
+  const xp = need.reduce((s, x) => s + x.q * x.l * 5, 0);
+  const topL = Math.max(...need.map((x) => x.l));
+  const who = pick(PEOPLE);
+  const line = pick(who.lines).replace('{item}', def(item(need[0].c, need[0].l))[1]);
+  return { id: ++S.orderSeq, who: { e: who.e, n: who.n }, line, need, stars, xp, gems: topL >= 4 ? 1 : 0 };
+}
+function fillOrders() { for (let k = 0; k < S.orders.length; k++) if (!S.orders[k]) S.orders[k] = newOrder(); }
+
+function haveCount(c, l) {
+  let n = 0;
+  for (const it of S.board) if (it && it.t === 'item' && it.c === c && it.l === l && !it.bub) n++;
+  return n;
+}
+function canDeliver(o) { return o.need.every((x) => haveCount(x.c, x.l) >= x.q); }
+
+function deliver(k) {
+  const o = S.orders[k];
+  if (!o || !canDeliver(o)) return false;
+  for (const x of o.need) {
+    let q = x.q;
+    for (let i = 0; i < N && q > 0; i++) {
+      const it = S.board[i];
+      if (it && it.t === 'item' && it.c === x.c && it.l === x.l && !it.bub) { S.board[i] = null; q--; }
+    }
+  }
+  S.stars += o.stars; S.gems += o.gems; S.stats.orders++;
+  S.orders[k] = null;
+  toast(`✅ ${o.who.n} 很滿意！+${o.stars}⭐${o.gems ? ` +${o.gems}💎` : ''}`, 's');
+  addXp(o.xp);
+  sel = null;
+  afterChange();
+  return true;
+}
+function skipOrder(k) {
+  if (S.gems < 1) { toast('💎 不足，跳過訂單需要 1 顆', 'e'); return; }
+  S.gems--; S.orders[k] = null; afterChange();
+}
+
+/* ---------- 每日寶箱 / 商店 ---------- */
+function chestReady() { return now() - S.chestAt >= CHEST_HOURS * 3600 * 1000; }
+function claimChest() {
+  if (!chestReady()) { toast(`下次寶箱：${fmtSec(Math.ceil((S.chestAt + CHEST_HOURS * 3600 * 1000 - now()) / 1000))} 後`); return; }
+  S.chestAt = now(); S.energy += 25; S.gems += 2;
+  const i = placeNew(box());
+  toast(`📦 每日寶箱：⚡25、💎2${i >= 0 ? '、🎁 神秘箱' : ''}`, 's', 3500);
+  afterChange();
+}
+
+const OFFERS = [
+  { e:'⚡', b:'能量 +30', s:'💎 10', fn() { if (S.gems < 10) return toast('💎 不足', 'e'); S.gems -= 10; S.energy += 30; toast('⚡ +30', 's'); } },
+  { e:'💎', b:'寶石 +10', s:'⭐ 300', fn() { if (S.stars < 300) return toast('⭐ 不足', 'e'); S.stars -= 300; S.gems += 10; toast('💎 +10', 's'); } },
+  { e:'🎁', b:'神秘箱 ×1', s:'⭐ 60',  fn() { if (S.stars < 60) return toast('⭐ 不足', 'e'); if (placeNew(box()) < 0) return toast('棋盤已滿', 'e'); S.stars -= 60; toast('🎁 已放到棋盤', 's'); } },
+];
+
+/* =====================================================================
+ * 每秒計時：能量、產生器、泡泡
+ * ===================================================================== */
+function tick() {
+  const t = now();
+  if (S.energy >= ENERGY_MAX) S.energyAt = t;
+  else while (S.energy < ENERGY_MAX && S.energyAt + ENERGY_SEC * 1000 <= t) { S.energy++; S.energyAt += ENERGY_SEC * 1000; }
+
+  for (let i = 0; i < N; i++) {
+    const it = S.board[i];
+    if (!it) continue;
+    if (it.t === 'gen') {
+      const G = GENS[it.k];
+      if (it.ch >= G.max) it.at = t;
+      else while (it.ch < G.max && it.at + G.regen * 1000 <= t) { it.ch++; it.at += G.regen * 1000; boardDirty = true; }
+    } else if (it.t === 'item' && it.bub && it.bub <= t) {
+      S.board[i] = null; boardDirty = true;
+      if (sel === i) sel = null;
+    }
+  }
+  renderHud();
+  if (boardDirty) renderBoard();
+  if (sel != null) renderInfo();
+  save();
+}
+
+/* =====================================================================
+ * 畫面
+ * ===================================================================== */
+const boardEl = $('board'), cells = [];
+function buildBoard() {
+  boardEl.innerHTML = '';
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'cell'; d.dataset.i = i;
+    boardEl.appendChild(d); cells.push(d);
+  }
+}
+
+function cellHtml(it) {
+  if (!it) return '';
+  if (it.t === 'fog') return '<span class="em">🕸️</span>';
+  if (it.t === 'box') return '<span class="em">🎁</span>';
+  if (it.t === 'gen') {
+    const G = GENS[it.k];
+    const badge = it.ch > 0 ? `⚡${it.ch}` : fmtSec(genNextIn(it));
+    return `<span class="em">${G.e}</span><i class="bolt${it.ch > 0 ? '' : ' cd'}">${badge}</i>`;
+  }
+  const [e, name] = def(it);
+  let h = `<span class="em" title="${name}">${e}</span><i class="lv">${it.l}</i>`;
+  if (isMax(it)) h += '<span class="crown em">👑</span>';
+  if (it.bub) h += `<i class="bolt">💎${bubblePrice(it)}</i>`;
+  return h;
+}
+
+function renderBoard() {
+  boardDirty = false;
+  for (let i = 0; i < N; i++) {
+    const it = S.board[i], d = cells[i];
+    const h = cellHtml(it);
+    if (d.innerHTML !== h) d.innerHTML = h;
+    d.classList.toggle('fog', !!it && it.t === 'fog');
+    d.classList.toggle('gen', !!it && it.t === 'gen');
+    d.classList.toggle('bub', !!it && it.t === 'item' && !!it.bub);
+    d.classList.toggle('sel', sel === i);
+  }
+}
+
+function animate(i, cls) {
+  requestAnimationFrame(() => {
+    const d = cells[i]; if (!d) return;
+    d.classList.remove(cls); void d.offsetWidth; d.classList.add(cls);
+    setTimeout(() => d.classList.remove(cls), 350);
+  });
+}
+
+function renderHud() {
+  $('lvlNum').textContent = S.level;
+  $('lvl').style.setProperty('--pct', `${Math.min(100, S.xp / xpNeed(S.level) * 100).toFixed(1)}%`);
+  $('lvlXp').textContent = `${S.xp}/${xpNeed(S.level)}`;
+  $('energy').textContent = S.energy;
+  $('energyTimer').textContent = S.energy < ENERGY_MAX ? fmtSec(Math.max(0, Math.ceil((S.energyAt + ENERGY_SEC * 1000 - now()) / 1000))) : '';
+  $('gems').textContent = S.gems;
+  $('stars').textContent = S.stars;
+  $('storageCnt').textContent = `${S.storage.length}/${STORAGE_MAX}`;
+  const ready = chestReady();
+  $('chestBtn').classList.toggle('ready', ready);
+  $('chestTxt').textContent = ready ? '領取' : fmtHms(Math.ceil((S.chestAt + CHEST_HOURS * 3600 * 1000 - now()) / 1000));
+}
+
+function renderOrders() {
+  const el = $('orders'); el.innerHTML = '';
+  S.orders.forEach((o, k) => {
+    if (!o) return;
+    const ok = canDeliver(o);
+    const d = document.createElement('div'); d.className = 'order';
+    d.innerHTML = `
+      <div class="who"><span class="em">${o.who.e}</span><div><b>${o.who.n}</b></div></div>
+      <div class="line">${o.line}</div>
+      <div class="needs">${o.need.map((x) => {
+        const have = Math.min(haveCount(x.c, x.l), x.q);
+        return `<div class="need${have >= x.q ? ' ok' : ''}"><span class="em">${def(item(x.c, x.l))[0]}</span><i>${x.l}</i><s>${have}/${x.q}</s></div>`;
+      }).join('')}</div>
+      <div class="reward"><span>⭐ +${o.stars}</span>${o.gems ? `<span>💎 +${o.gems}</span>` : ''}<span class="dim">XP +${o.xp}</span></div>
+      <div class="acts"><button type="button" data-deliver="${k}" ${ok ? '' : 'disabled'}>交付</button>
+      <button type="button" class="ghost skip" data-skip="${k}" title="跳過（💎1）">⏭</button></div>`;
+    el.appendChild(d);
+  });
+}
+
+function renderInfo() {
+  const el = $('info');
+  const it = sel != null ? S.board[sel] : null;
+  if (it == null) {
+    el.innerHTML = `<b>密室合成</b><p>拖曳兩個相同道具合成更高等級；點產生器產出道具；完成上方訂單賺 ⭐ 與經驗。</p>`;
+    return;
+  }
+  let title = '', desc = '', acts = '';
+  if (it.t === 'fog') { title = '蛛網'; desc = '在相鄰格完成一次合成即可清除，底下可能藏著東西。'; }
+  else if (it.t === 'box') { title = '神秘箱'; desc = '點一下打開，隨機獲得一個道具。'; acts = `<button type="button" data-act="open">打開</button><button type="button" class="ghost" data-act="store">收納</button>`; }
+  else if (it.t === 'gen') {
+    const G = GENS[it.k];
+    title = G.n;
+    desc = it.ch > 0 ? `點一下消耗 1⚡ 產出道具。剩 ${it.ch}/${G.max} 次，每 ${G.regen} 秒回復 1 次。`
+                     : `補貨中，${fmtSec(genNextIn(it))} 後回復 1 次。`;
+    acts = `<button type="button" data-act="spawn" ${it.ch > 0 ? '' : 'disabled'}>產出（1⚡）</button>`;
+  } else {
+    const [e, name] = def(it), ch = CHAINS[it.c];
+    title = `${name}（等級 ${it.l}）`;
+    if (it.bub) {
+      desc = `泡泡裡的 ${name}，花 💎${bubblePrice(it)} 買下，否則 ${fmtSec(Math.max(0, Math.ceil((it.bub - now()) / 1000)))} 後消失。`;
+      acts = `<button type="button" data-act="buy">購買 💎${bubblePrice(it)}</button>`;
+    } else if (ch.collect) {
+      desc = `點一下收取 +${ch.values[it.l - 1]} ${e}${isMax(it) ? '' : '，也可以兩個合成成更大的。'}`;
+      acts = `<button type="button" data-act="collect">收取</button>`;
+    } else {
+      desc = isMax(it) ? '已達最高等級，可交付訂單或出售。' : '合成後晉升至下一等級。';
+      acts = `<button type="button" class="ghost" data-act="sell">出售 ${sellValue(it)}⭐</button><button type="button" class="ghost" data-act="store">收納</button>`;
+    }
+  }
+  el.innerHTML = `<b>${title}</b><p>${desc}</p><div class="acts">${acts}</div>`;
+}
+
+function render() { renderHud(); renderOrders(); renderBoard(); renderInfo(); }
+function afterChange() { fillOrders(); boardDirty = true; render(); save(); }
+
+/* ---------- 提示 / 視窗 ---------- */
+let toastTimer = null;
+function toast(msg, kind = '', ms = 2200, action) {
+  const el = $('toast');
+  el.className = `toast show ${kind}`;
+  el.innerHTML = `<span>${msg}</span>`;
+  if (action) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = action.label;
+    b.onclick = action.fn; el.appendChild(b);
+  }
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, ms);
+}
+function hideToast() { $('toast').className = 'toast'; }
+
+function openModal(html) { $('sheet').innerHTML = html; $('modal').classList.add('show'); }
+function closeModal() { $('modal').classList.remove('show'); }
+
+function openShop() {
+  openModal(`<h2>🛒 商店</h2>
+    ${OFFERS.map((o, k) => `<div class="offer"><span class="em">${o.e}</span><div><b>${o.b}</b><span>${o.s}</span></div><button type="button" data-offer="${k}">購買</button></div>`).join('')}
+    <p>能量每 ${ENERGY_SEC} 秒自動回 1 點（上限 ${ENERGY_MAX}）。每日寶箱每 ${CHEST_HOURS} 小時可領一次。</p>
+    <p>統計：合成 ${S.stats.merges} 次、完成訂單 ${S.stats.orders} 張、產出道具 ${S.stats.spawns} 個。</p>
+    <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="ghost" data-close style="flex:1">關閉</button>
+    <button type="button" class="danger" data-reset>重置進度</button></div>`);
+}
+
+function openStorage() {
+  const slots = [];
+  for (let k = 0; k < STORAGE_MAX; k++) {
+    const it = S.storage[k];
+    slots.push(it ? `<div class="slot" data-take="${k}">${it.t === 'box' ? '<span class="em">🎁</span>' : `<span class="em">${def(it)[0]}</span><i class="lv">${it.l}</i>`}</div>`
+                  : '<div class="slot empty"></div>');
+  }
+  openModal(`<h2>🧳 收納箱 ${S.storage.length}/${STORAGE_MAX}</h2>
+    <p>點棋盤上的道具 → 「收納」可暫放；點這裡的道具放回棋盤。</p>
+    <div class="slots">${slots.join('')}</div>
+    <button type="button" class="ghost" data-close style="width:100%">關閉</button>`);
+}
+
+function openTutorial() {
+  openModal(`<h2>🔐 密室合成</h2>
+    <ul class="tut">
+      <li><span class="em">🗄️</span> 點 <b>道具櫃</b>、<b>工具推車</b> 花 1⚡ 產出道具，能量每分鐘回 1 點。</li>
+      <li><span class="em">🔑</span> 把兩個<b>相同道具</b>拖在一起就合成更高等級；一次湊到 5 個會多送一個。</li>
+      <li><span class="em">🕸️</span> 在蛛網旁邊合成可以清掉蛛網，底下藏著更多產生器。</li>
+      <li><span class="em">📋</span> 上方是店長與玩家的<b>訂單</b>，交付可賺 ⭐ 與經驗，升級拿 💎 與神秘箱。</li>
+      <li><span class="em">🫧</span> 合成偶爾會冒出<b>泡泡</b>，花 💎 可買下裡面的道具。</li>
+    </ul>
+    <button type="button" data-close style="width:100%">開始</button>`);
+  S.seenTut = true; save();
+}
+
+/* =====================================================================
+ * 互動
+ * ===================================================================== */
+function tap(i) {
+  const it = S.board[i];
+  if (!it) { sel = null; render(); return; }
+  if (it.t === 'gen') { sel = i; spawnFrom(i); render(); return; }
+  if (it.t === 'box') { openBox(i); sel = i; render(); return; }
+  if (it.t === 'item' && it.bub) { sel = i; render(); return; }
+  if (isCollect(it)) { collect(i); return; }
+  sel = sel === i ? null : i;
+  render();
+}
+
+const ghost = $('ghost');
+let overCell = null;
+function setOver(cell) {
+  if (overCell === cell) return;
+  if (overCell) overCell.classList.remove('over');
+  overCell = cell; if (overCell) overCell.classList.add('over');
+}
+
+boardEl.addEventListener('pointerdown', (e) => {
+  const cell = e.target.closest('.cell'); if (!cell) return;
+  const i = +cell.dataset.i, it = S.board[i];
+  e.preventDefault();
+  if (!it) { sel = null; render(); return; }
+  drag = { i, x0: e.clientX, y0: e.clientY, moved: false, movable: isMovable(it) };
+});
+document.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  if (!drag.moved) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 8) return;
+    if (!drag.movable) return;
+    drag.moved = true;
+    const it = S.board[drag.i];
+    ghost.textContent = it.t === 'gen' ? GENS[it.k].e : it.t === 'box' ? '🎁' : def(it)[0];
+    ghost.classList.add('on');
+    cells[drag.i].classList.add('src');
+  }
+  ghost.style.left = `${e.clientX}px`; ghost.style.top = `${e.clientY}px`;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  setOver(el && el.closest('.cell'));
+}, { passive: true });
+function endDrag(e, cancelled) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  ghost.classList.remove('on'); cells[d.i].classList.remove('src'); setOver(null);
+  if (cancelled) return;
+  if (!d.moved) { tap(d.i); return; }
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const cell = el && el.closest('.cell');
+  if (cell) drop(d.i, +cell.dataset.i);
+}
+document.addEventListener('pointerup', (e) => endDrag(e, false));
+document.addEventListener('pointercancel', (e) => endDrag(e, true));
+
+$('info').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-act]'); if (!b || sel == null) return;
+  const i = sel;
+  ({ open: () => openBox(i), store: () => toStorage(i), spawn: () => { spawnFrom(i); render(); },
+     buy: () => buyBubble(i), collect: () => collect(i), sell: () => sell(i) })[b.dataset.act]();
+});
+$('orders').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.deliver != null) deliver(+b.dataset.deliver);
+  if (b.dataset.skip != null) skipOrder(+b.dataset.skip);
+});
+$('chestBtn').addEventListener('click', claimChest);
+$('shopBtn').addEventListener('click', openShop);
+$('storageBtn').addEventListener('click', openStorage);
+$('resEnergy').addEventListener('click', openShop);
+$('resGems').addEventListener('click', openShop);
+$('modal').addEventListener('click', (e) => {
+  if (e.target === $('modal') || e.target.closest('[data-close]')) return closeModal();
+  const offer = e.target.closest('[data-offer]');
+  if (offer) { OFFERS[+offer.dataset.offer].fn(); afterChange(); openShop(); return; }
+  const take = e.target.closest('[data-take]');
+  if (take) return fromStorage(+take.dataset.take);
+  if (e.target.closest('[data-reset]')) {
+    if (confirm('確定要清除所有進度、從頭開始？')) { S = freshState(); sel = null; closeModal(); afterChange(); openTutorial(); }
+  }
+});
+
+/* ---------- 工具 ---------- */
+function fmtSec(s) { s = Math.max(0, s | 0); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+function fmtHms(s) { s = Math.max(0, s | 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}時${m}分` : `${m}分${s % 60}秒`; }
+
+/* =====================================================================
+ * 啟動
+ * ===================================================================== */
+buildBoard();
+S = load() || freshState();
+fillOrders();
+tick();
+render();
+if (!S.seenTut) openTutorial();
+setInterval(tick, 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+
+// 測試 / 除錯用（瀏覽器主控台可呼叫）
+window.__merge = { get S() { return S; }, set S(v) { S = v; }, drop, tap, spawnFrom, deliver, sell, undoSell, tick, render, afterChange, freshState, save, load, CHAINS, GENS, N, COLS, ROWS };
+</script>
+</body>
+</html>
